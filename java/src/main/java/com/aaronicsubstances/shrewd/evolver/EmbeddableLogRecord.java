@@ -8,16 +8,16 @@ public abstract class EmbeddableLogRecord {
     private final List<Object> positionalArgs;
     private final Object treeData;
 
-    // contents are Literal string, index into positional arg, or
-    // list of objects as key into treeData.
-    // each part of key in turn consists of JSON property name, or index into JSON array.
-    private final List<Object> parsedFormatString = new ArrayList<>();
+    // Contents are literal string, index into positional arg, or
+    // treeDataKey, which is list of objects as path into treeData.
+    // Each part of treeDataKey in turn consists of JSON property name, or index into JSON array.
+    private final List<Object> parsedFormatString;
 
-    public EmbeddableLogRecord(String formatString,
-            List<Object> positionalArgs, Object treeData) {
-        this.positionalArgs = positionalArgs;
+    public EmbeddableLogRecord(String formatString, Object treeData,
+            List<Object> positionalArgs) {
         this.treeData = treeData;
-        parseFormatString(formatString);
+        this.positionalArgs = positionalArgs;
+        this.parsedFormatString = parseFormatString(formatString);
     }
 
     public String toLogFormatString(List<Object> formatArgsReceiver) {
@@ -55,8 +55,62 @@ public abstract class EmbeddableLogRecord {
         return "%s";
     }
 
-    private void parseFormatString(String formatString) {
-        
+    protected Object getPositionalArg(List<Object> args, int index) {
+        // Support Python style indexing.
+        if (Math.abs(index) >= args.size()) {
+            return handleNonExistentPositionalArg(index);
+        }
+        if (index < 0) {
+            index += args.size();
+        }
+        return args.get(index);
+    }
+
+    protected Object handleNonExistentPositionalArg(int index) {
+        return null;
+    }
+
+    @SuppressWarnings("unchecked")
+    protected Object getTreeDataSlice(Object treeData, List<Object> treeDataKey) {
+        Object treeDataSlice = treeData;
+        for (Object keyPart : treeDataKey) {
+            if (keyPart instanceof Integer) {
+                int index = (Integer) keyPart;
+                if (!(treeDataSlice instanceof List)) {
+                    return handleNonExistentTreeDataSlice(treeDataKey);
+                }
+                List<Object> jsonArray = (List) treeDataSlice;
+                // Support Python style indexing.
+                if (Math.abs(index) >= jsonArray.size()) {
+                    return handleNonExistentTreeDataSlice(treeDataKey);
+                }
+                if (index < 0) {
+                    index += jsonArray.size();
+                }
+                treeDataSlice = jsonArray.get(index);
+            }
+            else {
+                assert keyPart instanceof String;
+                if (!(treeDataSlice instanceof Map)) {
+                    return handleNonExistentTreeDataSlice(treeDataKey);
+                }
+                Map<String, Object> jsonObject = (Map) treeDataSlice;
+                if (!jsonObject.containsKey(keyPart)) {
+                    return handleNonExistentTreeDataSlice(treeDataKey);
+                }
+                treeDataSlice = jsonObject.get(keyPart);
+            }
+        }
+        return treeDataSlice;
+    }
+
+    protected Object handleNonExistentTreeDataSlice(List<Object> treeDataKey) {
+        return null;
+    }
+
+    static List<Object> parseFormatString(String formatString) {
+        List<Object> parsedFormatString = new ArrayList<>();
+        return parsedFormatString;
     }
 
     List<Object> getParsedFormatString() {
@@ -85,55 +139,5 @@ public abstract class EmbeddableLogRecord {
             }
         }
         return logFormat.toString();
-    }
-
-    static Object getPositionalArg(List<Object> args, int index) {
-        if (index < 0) {
-            // Support Python style indexing.
-            index += args.size();
-        }
-        if (index >= 0 && index < args.size()) {
-            return args.get(index);
-        }
-        else {
-            return null;
-        }
-    }
-
-    @SuppressWarnings("unchecked")
-    static Object getTreeDataSlice(Object treeData, List<Object> treeDataKey) {
-        Object treeDataSlice = treeData;
-        for (Object keyPart : treeDataKey) {
-            if (keyPart instanceof Integer) {
-                int index = (Integer) keyPart;
-                if (!(treeDataSlice instanceof List)) {
-                    treeDataSlice = null;
-                    break;
-                }
-                List<Object> jsonArray = (List) treeDataSlice;
-                if (index < 0) {
-                    // Support Python style indexing.
-                    index += jsonArray.size();
-                }
-                if (index < 0 || index >= jsonArray.size()) {
-                    treeDataSlice = null;
-                    break;
-                }
-                treeDataSlice = jsonArray.get(index);
-            }
-            else {
-                if (!(treeDataSlice instanceof Map)) {
-                    treeDataSlice = null;
-                    break;
-                }
-                Map<String, Object> jsonObject = (Map) treeDataSlice;
-                if (!jsonObject.containsKey(keyPart)) {
-                    treeDataSlice = null;
-                    break;
-                }
-                treeDataSlice = jsonObject.get(keyPart);
-            }
-        }
-        return treeDataSlice;
     }
 }
