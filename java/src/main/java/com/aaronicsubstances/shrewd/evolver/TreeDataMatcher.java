@@ -1,6 +1,8 @@
 package com.aaronicsubstances.shrewd.evolver;
 
-import java.util.LinkedHashMap;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -32,7 +34,7 @@ public class TreeDataMatcher {
     }
 
     public void assertEquivalentTo(Object actual) {
-        assertEquivalentTo(actual, "", new LinkedHashMap<>());
+        assertEquivalentTo(actual, "", new HashMap<>());
     }
 
     protected void workOnEquivalenceAssertion(Object expected, Object actual,
@@ -49,13 +51,20 @@ public class TreeDataMatcher {
         TreeNodeType actualType = getTreeNodeType(actual);
         if (expectedType != actualType) {
             // mismatch found
+            String message = String.format("Expected type [%s] but got [%s]",
+                expectedType, actualType);
+            reportMismatch(message, pathToActual, pathExpectations);
         }
-        if (expectedType == TreeNodeType.OBJECT) {
+        else if (expectedType == TreeNodeType.OBJECT) {
             Map<String, Object> expectedMap = (Map) expected;
             Map<String, Object> actualMap = (Map) actual;
             for (Map.Entry<String, Object> expectedEntry : expectedMap.entrySet()) {
                 if (!actualMap.containsKey(expectedEntry.getKey())) {
                     // mismatch found
+                    String message = String.format("Expected object property not found: [%s]",
+                        expectedEntry.getKey());
+                    reportMismatch(message, pathToActual, pathExpectations);
+                    continue;
                 }
                 Object correspondingExpected = expectedEntry.getValue();
                 Object correspondingActual = actualMap.get(expectedEntry.getKey());
@@ -68,8 +77,12 @@ public class TreeDataMatcher {
             List<Object> actualList = (List) actual;
             if (expectedList.size() != actualList.size()) {
                 // mismatch found
+                String message = String.format("Expected array length [%d] but got [%d]",
+                    expectedList.size(), actualList.size());
+                reportMismatch(message, pathToActual, pathExpectations);
             }
-            for (int i = 0; i < expectedList.size(); i++) {
+            int commonSectionLength = Math.min(expectedList.size(), actualList.size());
+            for (int i = 0; i < commonSectionLength; i++) {
                 Object correspondingExpected = expectedList.get(i);
                 Object correspondingActual = actualList.get(i);
                 workOnEquivalenceAssertion(correspondingExpected, correspondingActual, 
@@ -79,6 +92,9 @@ public class TreeDataMatcher {
         else {
             if (!areLeafNodesEqual(actual, expected)) {
                 // mismatch found
+                String message = String.format("Expected [%s] but got [%s]",
+                    expected, actual);
+                reportMismatch(message, pathToActual, pathExpectations);
             }
         }
     }
@@ -106,19 +122,49 @@ public class TreeDataMatcher {
         }
     }
 
+    protected void reportMismatch(String message, String pathToActual,
+            Map<String, String> pathExpectations) {
+        message = wrapAssertionError(message, pathToActual, pathExpectations);
+        throw new AssertionError(message);
+    }
+
     static String wrapAssertionError(String message, String pathToActual,
             Map<String, String> pathExpectations) {
-        return message;
+        StringBuilder fullMessage = new StringBuilder();
+        fullMessage.append("At {").append(pathToActual).append("}: ");
+        fullMessage.append(message).append("\n\n");
+        if (!pathExpectations.isEmpty()) {
+            String title = "Expectations";
+            fullMessage.append(title).append("\n");
+            for (int i = 0; i < title.length(); i++) {
+                fullMessage.append("-");
+            }
+            fullMessage.append("\n");
+            int expIndex = 0;
+            List<String> expKeys = new ArrayList<>(pathExpectations.keySet());
+            Collections.sort(expKeys, (a, b)-> Integer.compare(a.length(), b.length()));
+            for (String expPath: expKeys) {
+                fullMessage.append(++expIndex).append(" ");
+                fullMessage.append(" At {").append(expPath).append("}: Expected ");
+                fullMessage.append(pathExpectations.get(expPath)).append("\n");
+            }
+            fullMessage.append("\n");
+        }
+        return fullMessage.toString();
     }
 
     private void assertEquivalentTo(Object actual, String pathToActual,
             Map<String, String> pathExpectations) {
         String expectation = getExpectedDescription();
         if (expectation != null && !expectation.isEmpty()) {
-            // For correctness throughout nested calls, recreate rather
+            // For correctness throughout recursive calls, recreate rather
             // than modify in place.
-            pathExpectations = new LinkedHashMap<>(pathExpectations);
-            pathExpectations.put(pathToActual, expectation);
+            pathExpectations = new HashMap<>(pathExpectations);
+            String previous = "";
+            if (pathExpectations.containsKey(pathToActual)) {
+                previous = pathExpectations.get(pathToActual) + "; ";
+            }
+            pathExpectations.put(pathToActual, previous + expectation);
         }
         if (expected instanceof TreeDataMatcher) {
             // It is up to nested matcher to include full node path and expectations
