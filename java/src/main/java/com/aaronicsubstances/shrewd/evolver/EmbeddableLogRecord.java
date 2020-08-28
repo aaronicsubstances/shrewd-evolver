@@ -109,8 +109,7 @@ public abstract class EmbeddableLogRecord {
     }
 
     static List<Object> parseFormatString(String formatString) {
-        List<Object> parsedFormatString = new ArrayList<>();
-        return parsedFormatString;
+        return new LogRecordFormatParser(formatString).parse();
     }
 
     List<Object> getParsedFormatString() {

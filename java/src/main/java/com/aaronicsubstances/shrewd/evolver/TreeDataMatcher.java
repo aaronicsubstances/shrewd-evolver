@@ -150,7 +150,7 @@ public class TreeDataMatcher {
         throw new AssertionError(message);
     }
 
-    static String wrapAssertionError(String message, String pathToActual,
+    public static String wrapAssertionError(String message, String pathToActual,
             Map<String, String> pathExpectations) {
         StringBuilder fullMessage = new StringBuilder();
         fullMessage.append("at {").append(pathToActual).append("}: ");
