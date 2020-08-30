@@ -8,8 +8,7 @@ import java.util.regex.Pattern;
 public class LogRecordFormatParser {
 
     enum FormatTokenType {
-        LITERAL_STRING_SECTION, LITERAL_BEGIN_REPLACEMENT, LITERAL_END_REPLACEMENT,
-        BEGIN_REPLACEMENT, END_REPLACEMENT, DOT, 
+        LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT, 
         OPENING_SQUARE, CLOSING_SQUARE
     }
     
@@ -17,9 +16,11 @@ public class LogRecordFormatParser {
     
     private final String source;
 
-    // Token properties. Assign defaults.
-    private int startPos, endPos;
-    private FormatTokenType tokenType;
+    // Token properties.
+    int startPos, endPos;
+    FormatTokenType tokenType;
+    int partStart;
+
     private boolean inReplacementField = false;
 
     public LogRecordFormatParser(String source) {
@@ -32,10 +33,12 @@ public class LogRecordFormatParser {
 
     private RuntimeException createParseError(String errorMessage, boolean scanError) {
         StringBuilder fullMessage = new StringBuilder();
-        int[] posInfo = calculateLineAndColumnNumbers(source, scanError ? endPos : startPos);
+        int errorPosition = scanError ? endPos : startPos;
+        int[] posInfo = calculateLineAndColumnNumbers(source, errorPosition);
         int lineNumber = posInfo[0], columnNumber = posInfo[1];
         String offendingLine = NEW_LINE_REGEX.split(source, -1)[lineNumber - 1];
-        fullMessage.append("at line ").append(lineNumber);
+        fullMessage.append("at index ").append(errorPosition);
+        fullMessage.append(", line ").append(lineNumber);
         fullMessage.append(": ").append(errorMessage).append("\n\n");
         fullMessage.append(offendingLine).append("\n");
         appendUnderline(fullMessage, offendingLine.length(), columnNumber-1, ' ', '^');
@@ -78,7 +81,36 @@ public class LogRecordFormatParser {
         }
     }
 
-    String nextToken() {
+    public List<Object> parse() {
+        List<Object> parts = new ArrayList<>();
+        Object part;
+        while ((part = parseOnePart()) != null) {
+            parts.add(part);
+        }
+        return parts;
+    }
+
+    Object parseOnePart() {
+        String token = nextToken();
+        if (token == null) {
+            return null;
+        }
+        switch (tokenType) {
+            case LITERAL_STRING_SECTION:
+                return token;
+            case BEGIN_REPLACEMENT:
+                inReplacementField = true;
+                Object part = parseReplacementField();
+                inReplacementField = false;
+                return part;
+            case END_REPLACEMENT:
+                throw createParseError("Single '}' encountered in format string");
+            default:
+                throw createParseError("Unexpected token: " + token);
+        }
+    }
+
+    private String nextToken() {
         if (endPos >= source.length()) {
             return null;
         }
@@ -86,37 +118,26 @@ public class LogRecordFormatParser {
         StringBuilder token = new StringBuilder();
         if (inReplacementField) {
             while (endPos < source.length()) {
-                char ch = source.charAt(endPos++);
+                char ch = source.charAt(endPos);
                 if (ch == '{' || ch == '}' || ch == '.' ||
                         ch == '[' || ch == ']') {
                     break;
                 }
                 token.append(ch);
+                endPos++;
             }
             if (token.length() > 0) {
                 tokenType = FormatTokenType.LITERAL_STRING_SECTION;
             }
             else {
-                char ch = source.charAt(startPos);
+                char ch = source.charAt(endPos++);
                 token.append(ch);
                 switch (ch) {
                     case '{':
-                        if (endPos < source.length() && source.charAt(endPos) == '{') {
-                            endPos++; // unescape by skipping one of them.
-                            tokenType = FormatTokenType.LITERAL_BEGIN_REPLACEMENT;
-                        }
-                        else {
-                            tokenType = FormatTokenType.BEGIN_REPLACEMENT;
-                        }
+                        tokenType = FormatTokenType.BEGIN_REPLACEMENT;
                         break;
                     case '}':
-                        if (endPos < source.length() && source.charAt(endPos) == '}') {
-                            endPos++; // unescape by skipping one of them.
-                            tokenType = FormatTokenType.LITERAL_END_REPLACEMENT;
-                        }
-                        else {
-                            tokenType = FormatTokenType.END_REPLACEMENT;
-                        }
+                        tokenType = FormatTokenType.END_REPLACEMENT;
                         break;
                     case '[':
                         tokenType = FormatTokenType.OPENING_SQUARE;
@@ -133,10 +154,11 @@ public class LogRecordFormatParser {
             }
         }
         else {
+            partStart = startPos;
             while (endPos < source.length()) {
-                char ch = source.charAt(endPos++);
+                char ch = source.charAt(endPos);
                 if (ch == '{') {
-                    if (endPos < source.length() && source.charAt(endPos) == '{') {
+                    if (endPos+1 < source.length() && source.charAt(endPos+1) == '{') {
                         endPos++; // unescape by skipping one of them.
                     }
                     else {
@@ -144,7 +166,7 @@ public class LogRecordFormatParser {
                     }
                 }
                 if (ch == '}') {
-                    if (endPos < source.length() && source.charAt(endPos) == '}') {
+                    if (endPos+1 < source.length() && source.charAt(endPos+1) == '}') {
                         endPos++; // unescape by skipping one of them.
                     }
                     else {
@@ -152,12 +174,13 @@ public class LogRecordFormatParser {
                     }
                 }
                 token.append(ch);
+                endPos++;
             }
             if (token.length() > 0) {
                 tokenType = FormatTokenType.LITERAL_STRING_SECTION;
             }
             else {
-                char ch = source.charAt(startPos);
+                char ch = source.charAt(endPos++);
                 token.append(ch);
                 switch (ch) {
                     case '{':
@@ -174,29 +197,8 @@ public class LogRecordFormatParser {
         return token.toString();
     }
 
-    public List<Object> parse() {
-        List<Object> parts = new ArrayList<>();
-        String token;
-        while ((token = nextToken()) != null) {
-            switch (tokenType) {
-                case LITERAL_STRING_SECTION:
-                    parts.add(token);
-                    break;
-                case BEGIN_REPLACEMENT:
-                    parseReplacementField(parts);
-                    break;
-                case END_REPLACEMENT:
-                    throw createParseError("Single '}' encountered in format string");
-                default:
-                    throw createParseError("Unexpected token: " + token);
-            }
-        }
-        return parts;
-    }
-
-    private void parseReplacementField(List<Object> parts) {
+    private Object parseReplacementField() {
         List<Object> treeDataKey = new ArrayList<>();
-        inReplacementField = true;
         while (true) {
             String token = nextToken();
             if (token == null) {
@@ -208,9 +210,7 @@ public class LogRecordFormatParser {
             if (treeDataKey.isEmpty() && tokenType == FormatTokenType.LITERAL_STRING_SECTION) {
                 Integer notTreeDataKeyButIndex = parsePositionalIndex(token);
                 if (notTreeDataKeyButIndex != null) {
-                    parts.add(notTreeDataKeyButIndex);
-                    treeDataKey = null;
-                    break;
+                    return notTreeDataKeyButIndex;
                 }
             }
             switch (tokenType) { 
@@ -236,19 +236,12 @@ public class LogRecordFormatParser {
                 case CLOSING_SQUARE:
                     throw createParseError("Single ']' encountered in replacement field");
                 case BEGIN_REPLACEMENT:
-                    throw createParseError("expected '}' before beginning of another replacement field");
-                case LITERAL_BEGIN_REPLACEMENT:
-                    throw createParseError("unexpected '{' in replacement field");
-                case LITERAL_END_REPLACEMENT:
-                    throw createParseError("unexpected '}' in replacement field");
+                    throw createParseError("invalid '{' in replacement field");
                 default:
                     throw createParseError("Unexpected token: " + token);
             }
         }
-        inReplacementField = false;
-        if (treeDataKey != null) {
-            parts.add(treeDataKey);
-        }
+        return treeDataKey;
     }
 
     private Integer parsePositionalIndex(String token) {
@@ -261,7 +254,7 @@ public class LogRecordFormatParser {
             positionalIndex = Integer.parseInt(token);
         }
         catch (NumberFormatException ex) {
-            if ("0123456789".contains("" + token.charAt(0))) {
+            if (!"0123456789".contains("" + token.charAt(0))) {
                 return null;
             }
             throw createParseError("invalid positional index");
