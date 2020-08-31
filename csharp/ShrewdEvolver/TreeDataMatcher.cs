@@ -79,8 +79,8 @@ namespace AaronicSubstances.ShrewdEvolver
             }
             else if (expectedType == TreeNodeType.OBJECT)
             {
-                var expectedMap = (Dictionary<string, object>) expected;
-                var actualMap = (Dictionary<string, object>) actual;
+                var expectedMap = (IDictionary<string, object>) expected;
+                var actualMap = (IDictionary<string, object>) actual;
                 foreach (KeyValuePair<string, object> expectedEntry in expectedMap)
                 {
                     if (!actualMap.ContainsKey(expectedEntry.Key))
@@ -101,8 +101,8 @@ namespace AaronicSubstances.ShrewdEvolver
             }
             else if (expectedType == TreeNodeType.ARRAY)
             {
-                var expectedList = (List<object>) expected;
-                var actualList = (List<object>) actual;
+                var expectedList = (IList<object>) expected;
+                var actualList = (IList<object>) actual;
                 if (expectedList.Count != actualList.Count)
                 {
                     // mismatch found
@@ -242,11 +242,11 @@ namespace AaronicSubstances.ShrewdEvolver
             {
                 return TreeNodeType.STRING;
             }
-            if (node is List<object>)
+            if (node is IList<object>)
             {
                 return TreeNodeType.ARRAY;
             }
-            if (node is Dictionary<string, object>)
+            if (node is IDictionary<string, object>)
             {
                 return TreeNodeType.OBJECT;
             }

@@ -23,5 +23,11 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             var list = new List<object>(args);
             return list;
         }
+
+        public static List<T> ToGenericList<T>(params T[] args)
+        {
+            var list = new List<T>(args);
+            return list;
+        }
     }
 }

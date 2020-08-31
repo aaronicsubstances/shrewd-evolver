@@ -46,8 +46,7 @@ public class LogRecordFormatParser {
     }
 
     private RuntimeException creatEndOfStringError(String errorMessage) {
-        String fullMessage = errorMessage;
-        throw new RuntimeException(fullMessage);
+        throw new RuntimeException(errorMessage);
     }
     
     static int[] calculateLineAndColumnNumbers(String s, int position) {
