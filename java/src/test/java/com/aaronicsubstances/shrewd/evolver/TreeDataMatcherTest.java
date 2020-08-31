@@ -72,9 +72,7 @@ public class TreeDataMatcherTest {
             System.err.println((index + 1) + ". " + ex);
             testPassed = true;
         }
-        if (!testPassed) {
-            fail("Expected non equivalence");
-        }
+        assertTrue(testPassed, "Expected non equivalence");
     }
 
     @DataProvider

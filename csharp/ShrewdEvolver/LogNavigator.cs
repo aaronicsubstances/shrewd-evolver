@@ -6,9 +6,9 @@ namespace AaronicSubstances.ShrewdEvolver
 {
     public class LogNavigator<T> where T : ILogPositionHolder
     {
-        private readonly List<T> logs;
+        private readonly IList<T> logs;
 
-        public LogNavigator(List<T> logs)
+        public LogNavigator(IList<T> logs)
         {
             this.logs = logs;
         }
