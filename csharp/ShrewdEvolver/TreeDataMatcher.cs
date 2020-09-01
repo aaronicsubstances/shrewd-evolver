@@ -142,22 +142,62 @@ namespace AaronicSubstances.ShrewdEvolver
             {
                 return actual == expected;
             }
+            if (!IsNumber(actual)) 
+            {
+                return actual.Equals(expected);
+            }
+
+            // At this stage leaf nodes are numbers convertible to the following:
+            // integer, floating point, decimal.
+            // To check, 
+            //   a. if floating point is involved, convert to double and use tolerance to compare.
+            //   b. if actual and expected are of the same type, then compare directly.
+            //   c. else if big decimal is involved, convert to big decimal and compare.
+            //   d. else convert to big integer and compare
+            if (IsFloatingPoint(actual) || IsFloatingPoint(expected))
+            {
+                double diff = ConvertToFloatingPoint(actual) - ConvertToFloatingPoint(expected);
+                return Math.Abs(diff) <= RealNumberComparisonTolerance;
+            }
+            else if (actual.GetType() == expected.GetType())
+            {
+                return actual.Equals(expected);
+            }
+            else if (actual is decimal || expected is decimal)
+            {
+                var decimals = new List<decimal>();
+                foreach (object op in new object[] { actual, expected })
+                {
+                    if (op is decimal)
+                    {
+                        decimals.Add((decimal)op);
+                    }
+                    else if (op is BigInteger)
+                    {
+                        decimals.Add((decimal)((BigInteger) op));
+                    }
+                    else
+                    {
+                        decimals.Add(ConvertToDecimal(op));
+                    }
+                }
+                return decimals[0] == decimals[1];
+            }
             else
             {
-                if (actual is double)
+                var integers = new List<BigInteger>();
+                foreach (object op in new object[]{ actual, expected }) 
                 {
-                    double diff = ((double)actual) - ((double)expected);
-                    return Math.Abs(diff) <= RealNumberComparisonTolerance;
+                    if (op is BigInteger)
+                    {
+                        integers.Add((BigInteger) op);
+                    }
+                    else
+                    {
+                        integers.Add(ConvertToInteger(op));
+                    }
                 }
-                else if (actual is float)
-                {
-                    double diff = ((float)actual) - ((float)expected);
-                    return Math.Abs(diff) <= RealNumberComparisonTolerance;
-                }
-                else
-                {
-                    return actual.Equals(expected);
-                }
+                return integers[0] == integers[1];
             }
         }
 
@@ -231,7 +271,6 @@ namespace AaronicSubstances.ShrewdEvolver
             }
             if (IsNumber(node))
             {
-                // double, long, decimal
                 return TreeNodeType.NUMBER;
             }
             if (node is bool)
@@ -267,6 +306,77 @@ namespace AaronicSubstances.ShrewdEvolver
                     || value is double
                     || value is decimal
                     || value is BigInteger;
+        }
+
+        private static bool IsFloatingPoint(object number)
+        {
+            return number is double || number is float;
+        }
+
+        private static double ConvertToFloatingPoint(object number)
+        {
+            double ans;
+            if (number is sbyte)
+            {
+                ans = (sbyte)number;
+            }
+            else if (number is byte)
+            {
+                ans = (byte)number;
+            }
+            else if (number is short)
+            {
+                ans = (short)number;
+            }
+            else if (number is ushort)
+            {
+                ans = (ushort)number;
+            }
+            else if (number is int)
+            {
+                ans = (int)number;
+            }
+            else if (number is uint)
+            {
+                ans = (uint)number;
+            }
+            else if (number is long)
+            {
+                ans = (long)number;
+            }
+            else if (number is ulong)
+            {
+                ans = (ulong)number;
+            }
+            else if (number is float)
+            {
+                ans = (float)number;
+            }
+            else if (number is double)
+            {
+                ans = (double)number;
+            }
+            else if (number is decimal)
+            {
+                ans = (double)((decimal)number);
+            }
+            else
+            {
+                ans = (double)((BigInteger)number);
+            }
+            return ans;
+        }
+
+        private static decimal ConvertToDecimal(object number)
+        {
+            var instance = (decimal)Activator.CreateInstance(typeof(decimal), number);
+            return instance;
+        }
+
+        private static BigInteger ConvertToInteger(object number)
+        {
+            var instance = (BigInteger)Activator.CreateInstance(typeof(BigInteger), number);
+            return instance;
         }
     }
 }

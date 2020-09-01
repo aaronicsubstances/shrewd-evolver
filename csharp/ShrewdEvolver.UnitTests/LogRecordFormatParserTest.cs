@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Text;
 using Xunit;
+using Xunit.Abstractions;
 using static AaronicSubstances.ShrewdEvolver.UnitTests.TestUtils;
 
 namespace AaronicSubstances.ShrewdEvolver.UnitTests
@@ -32,8 +33,11 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 }
 
                 var other = (TokenPart)obj;
-                return other.part.Equals(part) &&
-                    other.isReplacementField == isReplacementField &&
+                if (!CollectionWrapper.ComputeEquals(other.part, part))
+                {
+                    return false;
+                }
+                return other.isReplacementField == isReplacementField &&
                     other.startPos == startPos &&
                     other.endPos == endPos;
             }
@@ -46,9 +50,16 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
             public override string ToString()
             {
-                return "TokenPart{part=" + part + ", isReplacementField=" + isReplacementField +
+                return "TokenPart{part=" + CollectionWrapper.ComputeStringRepr(part) + ", isReplacementField=" + isReplacementField +
                     ", startPos=" + startPos + ", endPos=" + endPos + "}";
             }
+        }
+
+        private readonly ITestOutputHelper _output;
+
+        public LogRecordFormatParserTest(ITestOutputHelper output)
+        {
+            _output = output;
         }
 
         [Theory]
@@ -124,7 +135,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                     tokenizer.partStart, tokenizer.endPos);
                 actual.Add(partDescriptor);
             }
-            Assert.Equal(expected, actual);
+            Assert.Equal(new CollectionWrapper(expected), new CollectionWrapper(actual));
         }
 
         public static List<object[]> CreateTestParseOnePartData()
@@ -193,6 +204,62 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                     new TokenPart(ToList(10, -2), true, 7, 19),
                     new TokenPart(ToList("y", "z"), true, 19, 26)
                     ) }
+            };
+        }
+
+
+        [Theory]
+        [MemberData(nameof(CreateTestParseData))]
+        public void TestParse(int index, string source, List<object> expected)
+        {
+            List<object> actual = null;
+            try
+            {
+                var instance = new LogRecordFormatParser(source);
+                actual = instance.Parse();
+            }
+            catch (Exception ex)
+            {
+                _output.WriteLine((index + 1) + ". " + ex);
+            }
+            Assert.Equal(actual, expected);
+        }
+
+        public static List<object[]> CreateTestParseData()
+        {
+            int index = 0;
+            return new List<object[]>
+            {
+                new object[]{ index++, "{", null },
+                new object[]{ index++, "}", null },
+                new object[]{ index++, "{0", null },
+                new object[]{ index++, "{a}", ToList(ToList("a")) },
+                new object[]{ index++, "a{.0.[2]}b", null },
+                new object[]{ index++, "a{.}b", null },
+                new object[]{ index++, "a{.{b", null },
+                new object[]{ index++, "a{.x{b", null },
+                new object[]{ index++, "a{[0}b", null },
+                new object[]{ index++, "a{0]}b", null },
+                new object[]{ index++, "a{.0]}b", null },
+                new object[]{ index++, "a{[]}b", null },
+                new object[]{ index++, "a{[x]}b", null },
+                new object[]{ index++, "a{[200]}b", ToList("a", ToList(200), "b") },
+                new object[]{ index++, " a { x.data [ 200 ] [ 300 ] . q . z } b", ToList(" a ",
+                    ToList("x", "data", 200, 300, "q", "z"), " b") },
+                new object[]{ index++, "", ToList() },
+                new object[]{ index++, "{}", ToList(ToList()) },
+                new object[]{ index++, ".[]", ToList(".[]") },
+                new object[]{ index++, ".{{{{x}}}}", ToList(".{{x}}") },
+                new object[]{ index++, "0", ToList("0") },
+                new object[]{ index++, "{{0}}", ToList("{0}") },
+                new object[]{ index++, "{0}", ToList(0) },
+                new object[]{ index++, "{[0]}", ToList(ToList(0)) },
+
+                // test with newlines
+                new object[]{ index++, "{[\n0]\n}", ToList(ToList(0)) },
+                new object[]{ index++, "\nThere is plenty{\n}\n of peace\n", ToList("\nThere is plenty", ToList(),
+                    "\n of peace\n") },
+                new object[]{ index++, "{[0]}\nfirst\nsecond{a}}r{y}", null }
             };
         }
     }

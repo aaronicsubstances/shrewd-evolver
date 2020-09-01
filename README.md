@@ -2,7 +2,7 @@
 
 This projects seeks to provide tools helpful for automated testing, maintenance and evolution of software projects.
 
-Currently the project contains source files written Java 8, and are meant to be copied over into projects, and even ported into other programming languages. Groups of one or two source files consitute independent modules of functionality for helping the software engineer with this project's goals.
+Currently the project contains source files written Java 8 and C# 6, and are meant to be copied over into projects, and even ported into other programming languages. Groups of one or two source files consitute independent modules of functionality for helping the software engineer with this project's goals.
 
 The following provide information on the implemented modules.
 
@@ -45,7 +45,7 @@ And if a test case fails, the error message will include the exact part of the t
 java.lang.AssertionError: at {books[1].id}: expected [4] but found [5]
 ```
 
-Another convenience provided by *TreeDataMatcher* is that it ignores extra object fields in actual results. So for example, the above defined expectation will still match an actual result like:
+Another convenience provided by *TreeDataMatcher* is that it ignores extra object fields in actual results. So for example, the above defined expectation will also match an actual result like:
 
 ```cs
 var actual = new

@@ -22,7 +22,7 @@ namespace AaronicSubstances.ShrewdEvolver
         internal FormatTokenType tokenType;
         internal int partStart;
 
-        private bool inReplacementField = false;
+        private bool _inReplacementField = false;
 
         public LogRecordFormatParser(string source)
         {
@@ -115,9 +115,9 @@ namespace AaronicSubstances.ShrewdEvolver
                 case FormatTokenType.LITERAL_STRING_SECTION:
                     return token;
                 case FormatTokenType.BEGIN_REPLACEMENT:
-                    inReplacementField = true;
+                    _inReplacementField = true;
                     object part = ParseReplacementField();
-                    inReplacementField = false;
+                    _inReplacementField = false;
                     return part;
                 case FormatTokenType.END_REPLACEMENT:
                     throw CreateParseError("Single '}' encountered in format string");
@@ -134,7 +134,7 @@ namespace AaronicSubstances.ShrewdEvolver
             }
             startPos = endPos;
             var token = new StringBuilder();
-            if (inReplacementField)
+            if (_inReplacementField)
             {
                 while (endPos < source.Length)
                 {
