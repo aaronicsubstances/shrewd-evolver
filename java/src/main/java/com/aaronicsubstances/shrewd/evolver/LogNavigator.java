@@ -1,6 +1,5 @@
 package com.aaronicsubstances.shrewd.evolver;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 
@@ -24,11 +23,11 @@ public class LogNavigator<T extends LogPositionHolder> {
         return logs.get(nextIndex++);
     }
     
-    public T next(Collection<String> searchIds) {
+    public T next(List<String> searchIds) {
         return next(searchIds, null);
     }
     
-    public T next(Collection<String> searchIds, Collection<String> limitIds) {
+    public T next(List<String> searchIds, List<String> limitIds) {
         Objects.requireNonNull(searchIds, "searchIds");
         int stopIndex = logs.size();
         if (limitIds != null) {

@@ -23,7 +23,7 @@ public class LogNavigatorTest {
 
     @Test
     public void testEmptiness() {
-        LogNavigator instance = new LogNavigator(Arrays.asList());
+        LogNavigator<LogPositionHolderImpl> instance = new LogNavigator<>(Arrays.asList());
         assertEquals(instance.hasNext(), false);
         assertEquals(instance.nextIndex(), 0);
     }
@@ -33,7 +33,7 @@ public class LogNavigatorTest {
         List<LogPositionHolderImpl> testLogs = Arrays.asList(new LogPositionHolderImpl("a"), 
             new LogPositionHolderImpl("b"), new LogPositionHolderImpl("c"), 
             new LogPositionHolderImpl("c"));
-        LogNavigator instance = new LogNavigator(testLogs);
+        LogNavigator<LogPositionHolderImpl> instance = new LogNavigator<>(testLogs);
         
         for (int i = 0; i < testLogs.size(); i++) {
             assertEquals(instance.hasNext(), true);
@@ -50,7 +50,7 @@ public class LogNavigatorTest {
         List<LogPositionHolderImpl> testLogs = Arrays.asList(new LogPositionHolderImpl("a"), 
             new LogPositionHolderImpl("b"), new LogPositionHolderImpl("c"),
             new LogPositionHolderImpl("c"));
-        LogNavigator instance = new LogNavigator(testLogs);
+        LogNavigator<LogPositionHolderImpl> instance = new LogNavigator<>(testLogs);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
@@ -81,7 +81,7 @@ public class LogNavigatorTest {
         List<LogPositionHolderImpl> testLogs = Arrays.asList(new LogPositionHolderImpl("a"),
             new LogPositionHolderImpl("b"), new LogPositionHolderImpl("c"), 
             new LogPositionHolderImpl("c"));
-        LogNavigator instance = new LogNavigator(testLogs);
+        LogNavigator<LogPositionHolderImpl> instance = new LogNavigator<>(testLogs);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
