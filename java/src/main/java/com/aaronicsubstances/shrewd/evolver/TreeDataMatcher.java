@@ -1,5 +1,7 @@
 package com.aaronicsubstances.shrewd.evolver;
 
+import java.math.BigDecimal;
+import java.math.BigInteger;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -129,19 +131,63 @@ public class TreeDataMatcher {
         if (actual == null || expected == null) {
             return actual == expected;
         }
-        else {
-            if (actual instanceof Double) {
-                double diff = ((Double) actual).doubleValue() - ((Double) expected).doubleValue();
-                return Math.abs(diff) <= realNumberComparisonTolerance;
-            }
-            else if (actual instanceof Float) {
-                double diff = ((Float) actual).doubleValue() - ((Float) expected).doubleValue();
-                return Math.abs(diff) <= realNumberComparisonTolerance;
-            }
-            else {
-                return actual.equals(expected);
-            }
+        if (!(actual instanceof Number)) {
+            return actual.equals(expected);
         }
+
+        // At this stage leaf nodes are numbers convertible to the following:
+        // integer, floating point, decimal.
+        // To check, 
+        //   a. if floating point is involved, convert to double and use tolerance to compare.
+        //   b. if actual and expected are of the same type, then compare directly.
+        //   c. else if big decimal is involved, convert to big decimal and compare.
+        //   d. else convert to big integer and compare
+        if (isFloatingPoint(actual) || isFloatingPoint(expected)) {
+            double diff = convertToFloatingPoint(actual) - convertToFloatingPoint(expected);
+            return Math.abs(diff) <= realNumberComparisonTolerance;
+        }
+        else if (actual.getClass().equals(expected.getClass())) {
+            return actual.equals(expected);
+        }
+        else if (actual instanceof BigDecimal || expected instanceof BigDecimal) {
+            List<BigDecimal> decimals = new ArrayList<>();
+            for (Object op : new Object[]{actual, expected}) {
+                if (op instanceof BigDecimal) {
+                    decimals.add((BigDecimal) op);
+                }
+                else if (op instanceof BigInteger) {
+                    decimals.add(new BigDecimal((BigInteger) op));
+                }
+                else {
+                    decimals.add(new BigDecimal(convertToInteger(op)));
+                }
+            }
+            return decimals.get(0).equals(decimals.get(1));
+        }
+        else {
+            List<BigInteger> integers = new ArrayList<>();
+            for (Object op : new Object[]{actual, expected}) {
+                if (op instanceof BigInteger) {
+                    integers.add((BigInteger) op);
+                }
+                else {
+                    integers.add(BigInteger.valueOf(convertToInteger(op)));
+                }
+            }
+            return integers.get(0).equals(integers.get(1));
+        }
+    }
+
+    private static boolean isFloatingPoint(Object number) {
+        return number instanceof Double || number instanceof Float;
+    }
+
+    private static double convertToFloatingPoint(Object number) {
+        return ((Number) number).doubleValue();
+    }
+
+    private static long convertToInteger(Object number) {
+        return ((Number) number).longValue();
     }
 
     protected void reportMismatch(String message, String pathToActual,
@@ -201,7 +247,7 @@ public class TreeDataMatcher {
             return TreeNodeType.NULL;
         }
         if (node instanceof Number) {
-            // double, long, decimal
+            // integer, floating point, decimal
             return TreeNodeType.NUMBER;
         }
         if (node instanceof Boolean) {
