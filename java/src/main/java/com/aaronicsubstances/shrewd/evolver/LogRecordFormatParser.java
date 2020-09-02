@@ -2,6 +2,7 @@ package com.aaronicsubstances.shrewd.evolver;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -9,7 +10,76 @@ public class LogRecordFormatParser {
 
     enum FormatTokenType {
         LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT, 
-        OPENING_SQUARE, CLOSING_SQUARE
+        OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY
+    }
+
+    static class PartDescriptor {
+        public String literalSection;
+        public int positionalArgIndex;
+        public List<Object> treeDataKey;
+        public boolean serializeTreeData;
+
+        public PartDescriptor(String literalSection) {
+            this.literalSection = literalSection;
+        }
+
+        public PartDescriptor(int positionalArgIndex) {
+            this.positionalArgIndex = positionalArgIndex;
+        }
+
+        public PartDescriptor(List<Object> treeDataKey) {
+            this(treeDataKey, true);
+        }
+
+        public PartDescriptor(List<Object> treeDataKey, boolean serializeTreeData) {
+            this.treeDataKey = treeDataKey;
+            this.serializeTreeData = serializeTreeData;
+        }
+
+        @Override
+        public int hashCode() {
+            int hash = 3;
+            hash = 67 * hash + Objects.hashCode(this.literalSection);
+            hash = 67 * hash + this.positionalArgIndex;
+            hash = 67 * hash + Objects.hashCode(this.treeDataKey);
+            hash = 67 * hash + (this.serializeTreeData ? 1 : 0);
+            return hash;
+        }
+
+        @Override
+        public boolean equals(Object obj) {
+            if (this == obj) {
+                return true;
+            }
+            if (obj == null) {
+                return false;
+            }
+            if (getClass() != obj.getClass()) {
+                return false;
+            }
+            final PartDescriptor other = (PartDescriptor) obj;
+            if (this.positionalArgIndex != other.positionalArgIndex) {
+                return false;
+            }
+            if (!Objects.equals(this.literalSection, other.literalSection)) {
+                return false;
+            }
+            if (!Objects.equals(this.treeDataKey, other.treeDataKey)) {
+                return false;
+            }
+            if (this.serializeTreeData != other.serializeTreeData) {
+                return false;
+            }
+            return true;
+        }
+
+        @Override
+        public String toString() {
+            return "PartDescriptor{" + "literalSection=" + literalSection +
+                ", positionalArgIndex=" + positionalArgIndex +
+                ", treeDataKey=" + treeDataKey + 
+                ", serializeTreeData=" + serializeTreeData + '}';
+        }
     }
     
     private static final Pattern NEW_LINE_REGEX = Pattern.compile("\r\n|\r|\n");
@@ -80,26 +150,26 @@ public class LogRecordFormatParser {
         }
     }
 
-    public List<Object> parse() {
-        List<Object> parts = new ArrayList<>();
-        Object part;
+    public List<PartDescriptor> parse() {
+        List<PartDescriptor> parts = new ArrayList<>();
+        PartDescriptor part;
         while ((part = parseOnePart()) != null) {
             parts.add(part);
         }
         return parts;
     }
 
-    Object parseOnePart() {
+    PartDescriptor parseOnePart() {
         String token = nextToken();
         if (token == null) {
             return null;
         }
         switch (tokenType) {
             case LITERAL_STRING_SECTION:
-                return token;
+                return new PartDescriptor(token);
             case BEGIN_REPLACEMENT:
                 inReplacementField = true;
-                Object part = parseReplacementField();
+                PartDescriptor part = parseReplacementField();
                 inReplacementField = false;
                 return part;
             case END_REPLACEMENT:
@@ -119,7 +189,7 @@ public class LogRecordFormatParser {
             while (endPos < source.length()) {
                 char ch = source.charAt(endPos);
                 if (ch == '{' || ch == '}' || ch == '.' ||
-                        ch == '[' || ch == ']') {
+                        ch == '[' || ch == ']' || ch == '$') {
                     break;
                 }
                 token.append(ch);
@@ -146,6 +216,9 @@ public class LogRecordFormatParser {
                         break;
                     case '.':
                         tokenType = FormatTokenType.DOT;
+                        break;
+                    case '$':
+                        tokenType = FormatTokenType.STRINGIFY;
                         break;
                     default:
                         throw createParseError("Unexpected char: " + ch, true);
@@ -196,8 +269,10 @@ public class LogRecordFormatParser {
         return token.toString();
     }
 
-    private Object parseReplacementField() {
+    private PartDescriptor parseReplacementField() {
         List<Object> treeDataKey = new ArrayList<>();
+        boolean serializeTreeData = true;
+        boolean tokenObserved = false;
         while (true) {
             String token = nextToken();
             if (token == null) {
@@ -209,7 +284,7 @@ public class LogRecordFormatParser {
             if (treeDataKey.isEmpty() && tokenType == FormatTokenType.LITERAL_STRING_SECTION) {
                 Integer notTreeDataKeyButIndex = parsePositionalIndex(token);
                 if (notTreeDataKeyButIndex != null) {
-                    return notTreeDataKeyButIndex;
+                    return new PartDescriptor(notTreeDataKeyButIndex);
                 }
             }
             switch (tokenType) { 
@@ -222,6 +297,14 @@ public class LogRecordFormatParser {
                         else {
                             throw createParseError("expected '.', '[' or '}'");
                         }
+                    }
+                    break;
+                case STRINGIFY:
+                    if (!tokenObserved) {
+                        serializeTreeData = false;
+                    }
+                    else {
+                        throw createParseError("'$' is only valid as start of replacement field");
                     }
                     break;
                 case OPENING_SQUARE:
@@ -239,8 +322,9 @@ public class LogRecordFormatParser {
                 default:
                     throw createParseError("Unexpected token: " + token);
             }
+            tokenObserved = true;
         }
-        return treeDataKey;
+        return new PartDescriptor(treeDataKey, serializeTreeData);
     }
 
     private Integer parsePositionalIndex(String token) {

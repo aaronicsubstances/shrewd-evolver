@@ -1,5 +1,8 @@
 package com.aaronicsubstances.shrewd.evolver;
 
+import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.PartDescriptor;
+
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -11,7 +14,7 @@ public abstract class EmbeddableLogRecord {
     // Contents are literal string, index into positional arg, or
     // treeDataKey, which is list of objects as path into treeData.
     // Each part of treeDataKey in turn consists of JSON property name, or index into JSON array.
-    private final List<Object> parsedFormatString;
+    private final List<PartDescriptor> parsedFormatString;
 
     public EmbeddableLogRecord(String formatString, Object treeData,
             List<Object> positionalArgs) {
@@ -66,18 +69,18 @@ public abstract class EmbeddableLogRecord {
         return args.get(index);
     }
 
-    protected Object handleNonExistentPositionalArg(int index) {
-        return null;
-    }
-
     @SuppressWarnings("unchecked")
     protected Object getTreeDataSlice(Object treeData, List<Object> treeDataKey) {
         Object treeDataSlice = treeData;
         for (Object keyPart : treeDataKey) {
+            if (treeDataSlice == null) {
+                break;
+            }
             if (keyPart instanceof Integer) {
                 int index = (Integer) keyPart;
                 if (!(treeDataSlice instanceof List)) {
-                    return handleNonExistentTreeDataSlice(treeDataKey);
+                    treeDataSlice = getTreeDataListItem(treeDataSlice, index);
+                    continue;
                 }
                 List<Object> jsonArray = (List) treeDataSlice;
                 // Support Python style indexing.
@@ -92,7 +95,8 @@ public abstract class EmbeddableLogRecord {
             else {
                 assert keyPart instanceof String;
                 if (!(treeDataSlice instanceof Map)) {
-                    return handleNonExistentTreeDataSlice(treeDataKey);
+                    treeDataSlice = getTreeDataPropertyValue(treeDataSlice, (String) keyPart);
+                    continue;
                 }
                 Map<String, Object> jsonObject = (Map) treeDataSlice;
                 if (!jsonObject.containsKey(keyPart)) {
@@ -108,33 +112,55 @@ public abstract class EmbeddableLogRecord {
         return null;
     }
 
-    static List<Object> parseFormatString(String formatString) {
+    protected Object handleNonExistentPositionalArg(int index) {
+        return null;
+    }
+
+    protected Object getTreeDataListItem(Object treeData, int index) {
+        return null;
+    }
+
+    protected Object getTreeDataPropertyValue(Object treeData, String propertyName) {
+        try {
+            Class<?> propAccessorType = Class.forName("org.apache.commons.beanutils.PropertyUtils");
+            Method propAccessor = propAccessorType.getMethod("getSimpleProperty", Object.class,
+                String.class);
+            return propAccessor.invoke(null, treeData, propertyName);
+        }
+        catch (Exception ex) {
+            return null;
+        }
+    }
+
+    static List<PartDescriptor> parseFormatString(String formatString) {
         return new LogRecordFormatParser(formatString).parse();
     }
 
-    List<Object> getParsedFormatString() {
+    List<PartDescriptor> getParsedFormatString() {
         return parsedFormatString;
     }
 
-    @SuppressWarnings("unchecked")
     private String generateFormatString(List<Object> formatArgsReceiver, boolean forLogger) {
         StringBuilder logFormat = new StringBuilder();
         int uniqueIndex = 0;
-        for (Object part : parsedFormatString) {
-            if (part instanceof Integer) {
+        for (PartDescriptor part : parsedFormatString) {
+            if (part.treeDataKey != null) {
                 logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
-                int position = (Integer) part;
-                Object item = getPositionalArg(positionalArgs, position);
-                formatArgsReceiver.add(item);
+                Object treeDataSlice = getTreeDataSlice(treeData, part.treeDataKey);
+                if (part.serializeTreeData) {
+                    formatArgsReceiver.add(toStructuredLogRecord(treeDataSlice));
+                }
+                else {
+                    formatArgsReceiver.add(treeDataSlice);
+                }
             }
-            else if (part instanceof List) {
-                logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
-                List<Object> treeDataKey = (List) part;
-                Object treeDataSlice = getTreeDataSlice(treeData, treeDataKey);
-                formatArgsReceiver.add(toStructuredLogRecord(treeDataSlice));
+            else if (part.literalSection != null) {
+                logFormat.append(escapeLiteral(part.literalSection, forLogger));
             }
             else {
-                logFormat.append(escapeLiteral((String) part, forLogger));
+                logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
+                Object item = getPositionalArg(positionalArgs, part.positionalArgIndex);
+                formatArgsReceiver.add(item);
             }
         }
         return logFormat.toString();

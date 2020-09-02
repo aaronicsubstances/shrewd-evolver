@@ -291,7 +291,7 @@ we can use the template string
 
 ```cs
 @"
-New record created on {dateCreated} with {0} books. Price is {price}.
+New record created on {$dateCreated} with {0} books. Price is {$price}.
 The books are: {books[0].title}, {books[1].title}
 "
 ```
@@ -325,11 +325,11 @@ The books are: {}, {}
 
 and populates list argument with this equivalent
 ```cs
-new List<object>{ "\"2020-09-01T09:00\"", 2, 40, "\"Beavers\"", "\"Shakers\""}
+new List<object>{ "2020-09-01T09:00", 2, 40, "\"Beavers\"", "\"Shakers\""}
 ```
 
-Finally, regardless of subclass implementation (ie without calling upon serialization), calling toString() directly on *EmbeddableLogRecord* instance yields the string
+Finally, calling toString() directly on *EmbeddableLogRecord* instance yields the string
 ```
-New record created on "2020-09-01T09:00" with 2 books. Price is 40.
+New record created on 2020-09-01T09:00 with 2 books. Price is 40.
 The books are: "Beavers", "Shakers"
 ```
