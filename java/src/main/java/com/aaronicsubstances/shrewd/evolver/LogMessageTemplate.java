@@ -1,13 +1,45 @@
 package com.aaronicsubstances.shrewd.evolver;
 
-import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.PartDescriptor;
+import com.aaronicsubstances.shrewd.evolver.LogMessageTemplateParser.PartDescriptor;
 
 import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public abstract class EmbeddableLogRecord {
+public abstract class LogMessageTemplate {
+    
+    public static class Unstructured {
+        private final String formatString;
+        private final List<Object> formatArgs;
+
+        public Unstructured(String formatString, List<Object> formatArgs) {
+            this.formatString = formatString;
+            this.formatArgs = formatArgs;
+        }
+
+        public String getFormatString() {
+            return formatString;
+        }
+
+        public List<Object> getFormatArgs() {
+            return formatArgs;
+        }
+    }
+
+    public class Structured {
+        private final Object treeDataSlice;
+
+        public Structured(Object treeDataSlice) {
+            this.treeDataSlice = treeDataSlice;
+        }
+
+        @Override
+        public String toString() {
+            return serializeData(treeDataSlice);
+        }
+    }
+
     private final List<Object> positionalArgs;
     private final Object treeData;
 
@@ -16,15 +48,11 @@ public abstract class EmbeddableLogRecord {
     // Each part of treeDataKey in turn consists of JSON property name, or index into JSON array.
     private final List<PartDescriptor> parsedFormatString;
 
-    public EmbeddableLogRecord(String formatString, Object treeData,
+    public LogMessageTemplate(String formatString, Object treeData,
             List<Object> positionalArgs) {
         this.treeData = treeData;
         this.positionalArgs = positionalArgs;
         this.parsedFormatString = parseFormatString(formatString);
-    }
-
-    public String toLogFormatString(List<Object> formatArgsReceiver) {
-        return generateFormatString(formatArgsReceiver, true);
     }
 
     @Override
@@ -39,13 +67,14 @@ public abstract class EmbeddableLogRecord {
         return toStructuredLogRecord(treeData);
     }
 
+    public Object toUnstructuredLogRecord() {
+        List<Object> formatArgs = new ArrayList<>();
+        String formatString = generateFormatString(formatArgs, true);
+        return new Unstructured(formatString, formatArgs);
+    }
+
     protected Object toStructuredLogRecord(Object treeDataSlice) {
-        return new Object() {
-            @Override
-            public String toString() {
-                return serializeData(treeDataSlice);
-            }
-        };
+        return new Structured(treeDataSlice);
     }
 
     protected abstract String serializeData(Object treeDataSlice);
@@ -132,7 +161,7 @@ public abstract class EmbeddableLogRecord {
     }
 
     static List<PartDescriptor> parseFormatString(String formatString) {
-        return new LogRecordFormatParser(formatString).parse();
+        return new LogMessageTemplateParser(formatString).parse();
     }
 
     List<PartDescriptor> getParsedFormatString() {

@@ -6,14 +6,14 @@ import java.util.Objects;
 
 import static java.util.Arrays.asList;
 
-import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.FormatTokenType;
-import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.PartDescriptor;
+import com.aaronicsubstances.shrewd.evolver.LogMessageTemplateParser.FormatTokenType;
+import com.aaronicsubstances.shrewd.evolver.LogMessageTemplateParser.PartDescriptor;
 import static org.testng.Assert.*;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
-public class LogRecordFormatParserTest {
+public class LogMessageTemplateParserTest {
 
     public static class TokenPart {
         final PartDescriptor part;
@@ -54,7 +54,7 @@ public class LogRecordFormatParserTest {
     public void testCalculateLineAndColumnNumbers(String s, int pos,
             int expLineNumber, int expColumnNumber) {
         int[] expected = new int[]{ expLineNumber, expColumnNumber };
-        int[] actual = LogRecordFormatParser.calculateLineAndColumnNumbers(s, pos);
+        int[] actual = LogMessageTemplateParser.calculateLineAndColumnNumbers(s, pos);
         assertEquals(actual, expected);
     }
 
@@ -106,7 +106,7 @@ public class LogRecordFormatParserTest {
 
     @Test(dataProvider = "createTestParseOnePartData")
     public void testParseOnePart(String source, List<TokenPart> expected) {
-        LogRecordFormatParser tokenizer = new LogRecordFormatParser(source);
+        LogMessageTemplateParser tokenizer = new LogMessageTemplateParser(source);
         PartDescriptor part;
         List<TokenPart> actual = new ArrayList<>();
         while ((part = tokenizer.parseOnePart()) != null) {
@@ -207,7 +207,7 @@ public class LogRecordFormatParserTest {
     public void testParse(int index, String source, List<PartDescriptor> expected) {
         List<PartDescriptor> actual = null;
         try {
-            LogRecordFormatParser instance = new LogRecordFormatParser(source);
+            LogMessageTemplateParser instance = new LogMessageTemplateParser(source);
             actual = instance.parse();
         }
         catch (Throwable ex) {

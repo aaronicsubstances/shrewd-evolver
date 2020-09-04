@@ -6,11 +6,12 @@ import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-public class LogRecordFormatParser {
+public class LogMessageTemplateParser {
 
     enum FormatTokenType {
         LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT, 
-        OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY
+        OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, DESTRUCTURE,
+        AT, DOLLAR, COMMA, COLON
     }
 
     static class PartDescriptor {
@@ -93,7 +94,7 @@ public class LogRecordFormatParser {
 
     private boolean inReplacementField = false;
 
-    public LogRecordFormatParser(String source) {
+    public LogMessageTemplateParser(String source) {
         this.source = source;
     }
 
@@ -168,8 +169,10 @@ public class LogRecordFormatParser {
             case LITERAL_STRING_SECTION:
                 return new PartDescriptor(token);
             case BEGIN_REPLACEMENT:
+            case STRINGIFY:
+            case DESTRUCTURE:
                 inReplacementField = true;
-                PartDescriptor part = parseReplacementField();
+                PartDescriptor part = parseReplacementField(tokenType != FormatTokenType.STRINGIFY);
                 inReplacementField = false;
                 return part;
             case END_REPLACEMENT:
@@ -188,8 +191,9 @@ public class LogRecordFormatParser {
         if (inReplacementField) {
             while (endPos < source.length()) {
                 char ch = source.charAt(endPos);
-                if (ch == '{' || ch == '}' || ch == '.' ||
-                        ch == '[' || ch == ']' || ch == '$') {
+                if (ch == '{' || ch == '}' || ch == '.'||
+                        ch == '[' || ch == ']' || ch == '$' ||
+                        ch == '@' || ch == ',' || ch == ':') {
                     break;
                 }
                 token.append(ch);
@@ -217,8 +221,17 @@ public class LogRecordFormatParser {
                     case '.':
                         tokenType = FormatTokenType.DOT;
                         break;
+                    case ':':
+                        tokenType = FormatTokenType.COLON;
+                        break;
+                    case ',':
+                        tokenType = FormatTokenType.COMMA;
+                        break;
+                    case '@':
+                        tokenType = FormatTokenType.AT;
+                        break;
                     case '$':
-                        tokenType = FormatTokenType.STRINGIFY;
+                        tokenType = FormatTokenType.DOLLAR;
                         break;
                     default:
                         throw createParseError("Unexpected char: " + ch, true);
@@ -230,7 +243,7 @@ public class LogRecordFormatParser {
             while (endPos < source.length()) {
                 char ch = source.charAt(endPos);
                 if (ch == '{') {
-                    if (endPos+1 < source.length() && source.charAt(endPos+1) == '{') {
+                    if (endPos + 1 < source.length() && source.charAt(endPos + 1) == '{') {
                         endPos++; // unescape by skipping one of them.
                     }
                     else {
@@ -256,7 +269,24 @@ public class LogRecordFormatParser {
                 token.append(ch);
                 switch (ch) {
                     case '{':
-                        tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                        if (endPos < source.length()) {
+                            switch (source.charAt(endPos)) {
+                                case '@':
+                                    tokenType = FormatTokenType.DESTRUCTURE;
+                                    endPos++;
+                                    break;
+                                case '$':
+                                    tokenType = FormatTokenType.STRINGIFY;
+                                    endPos++;
+                                    break;
+                                default:
+                                    tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                                    break;
+                            }
+                        }
+                        else {
+                            tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                        }
                         break;
                     case '}':
                         tokenType = FormatTokenType.END_REPLACEMENT;
@@ -269,10 +299,8 @@ public class LogRecordFormatParser {
         return token.toString();
     }
 
-    private PartDescriptor parseReplacementField() {
+    private PartDescriptor parseReplacementField(boolean serializeTreeData) {
         List<Object> treeDataKey = new ArrayList<>();
-        boolean serializeTreeData = true;
-        boolean tokenObserved = false;
         while (true) {
             String token = nextToken();
             if (token == null) {
@@ -299,14 +327,6 @@ public class LogRecordFormatParser {
                         }
                     }
                     break;
-                case STRINGIFY:
-                    if (!tokenObserved) {
-                        serializeTreeData = false;
-                    }
-                    else {
-                        throw createParseError("'$' is only valid as start of replacement field");
-                    }
-                    break;
                 case OPENING_SQUARE:
                     int arrayIndex = parseArrayIndex();
                     treeDataKey.add(arrayIndex);
@@ -322,7 +342,6 @@ public class LogRecordFormatParser {
                 default:
                     throw createParseError("Unexpected token: " + token);
             }
-            tokenObserved = true;
         }
         return new PartDescriptor(treeDataKey, serializeTreeData);
     }

@@ -12,9 +12,9 @@ import org.testng.annotations.Test;
 
 import static org.testng.Assert.*;
 
-public class EmbeddableLogRecordTest {
+public class LogMessageTemplateTest {
 
-    public static class EmbeddableLogRecordImpl extends EmbeddableLogRecord {
+    public static class EmbeddableLogRecordImpl extends LogMessageTemplate {
         private static final Gson JSON = new Gson();
 
         public EmbeddableLogRecordImpl(String formatString, Object treeData,
@@ -29,7 +29,7 @@ public class EmbeddableLogRecordTest {
     
     @Test(dataProvider = "creatTestGetTreeDataSliceData")
     public void testGetTreeDataSlice(Object treeData, List<Object> treeDataKey, Object expected) {
-        EmbeddableLogRecord instance = new EmbeddableLogRecordImpl("", treeData, null);
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", treeData, null);
         Object actual = instance.getTreeDataSlice(treeData, treeDataKey);
         assertEquals(actual, expected);
     }
@@ -61,7 +61,7 @@ public class EmbeddableLogRecordTest {
 
     @Test(dataProvider = "createTestGetPositionalArgData")
     public void testGetPositionalArg(List<Object> args, int index, Object expected) {
-        EmbeddableLogRecord instance = new EmbeddableLogRecordImpl("", null, args);
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", null, args);
         Object actual = instance.getPositionalArg(args, index);
         assertEquals(actual, expected);
     }
