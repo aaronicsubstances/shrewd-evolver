@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public abstract class LogMessageTemplate {
+public class LogMessageTemplate {
     
     public static class Unstructured {
         private final String formatString;
@@ -77,7 +77,20 @@ public abstract class LogMessageTemplate {
         return new Structured(treeDataSlice);
     }
 
-    protected abstract String serializeData(Object treeDataSlice);
+    protected String serializeData(Object treeDataSlice) {
+        try {
+            Class<?> gsonCls = Class.forName("com.google.gson.Gson");
+            Object gsonInstance = gsonCls.newInstance();
+            Method method = gsonCls.getMethod("toJson", Object.class);
+            return (String)method.invoke(gsonInstance, treeDataSlice);
+        }
+        catch (Exception ex) {
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException)ex;
+            }
+            throw new RuntimeException(ex);
+        }
+    }
 
     protected String escapeLiteral(String literal, boolean forLogger) {
         return literal.replace("%", "%%");
