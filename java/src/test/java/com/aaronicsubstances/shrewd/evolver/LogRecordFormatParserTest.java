@@ -1,12 +1,10 @@
 package com.aaronicsubstances.shrewd.evolver;
 
-import java.util.Arrays;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import static java.util.Arrays.asList;
-import static com.aaronicsubstances.shrewd.evolver.TestUtils.toMap;
 
 import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.FormatTokenType;
 import com.aaronicsubstances.shrewd.evolver.LogRecordFormatParser.PartDescriptor;

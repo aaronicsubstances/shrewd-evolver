@@ -1,6 +1,5 @@
 package com.aaronicsubstances.shrewd.evolver;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static java.util.Arrays.asList;

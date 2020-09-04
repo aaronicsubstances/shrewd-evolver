@@ -82,7 +82,7 @@ public abstract class EmbeddableLogRecord {
                     treeDataSlice = getTreeDataListItem(treeDataSlice, index);
                     continue;
                 }
-                List<Object> jsonArray = (List) treeDataSlice;
+                List<Object> jsonArray = (List<Object>) treeDataSlice;
                 // Support Python style indexing.
                 if (Math.abs(index) >= jsonArray.size()) {
                     return handleNonExistentTreeDataSlice(treeDataKey);
@@ -93,12 +93,11 @@ public abstract class EmbeddableLogRecord {
                 treeDataSlice = jsonArray.get(index);
             }
             else {
-                assert keyPart instanceof String;
                 if (!(treeDataSlice instanceof Map)) {
-                    treeDataSlice = getTreeDataPropertyValue(treeDataSlice, (String) keyPart);
+                    treeDataSlice = getTreeDataPropertyValue(treeDataSlice, keyPart);
                     continue;
                 }
-                Map<String, Object> jsonObject = (Map) treeDataSlice;
+                Map<Object, Object> jsonObject = (Map<Object, Object>) treeDataSlice;
                 if (!jsonObject.containsKey(keyPart)) {
                     return handleNonExistentTreeDataSlice(treeDataKey);
                 }
@@ -120,7 +119,7 @@ public abstract class EmbeddableLogRecord {
         return null;
     }
 
-    protected Object getTreeDataPropertyValue(Object treeData, String propertyName) {
+    protected Object getTreeDataPropertyValue(Object treeData, Object propertyName) {
         try {
             Class<?> propAccessorType = Class.forName("org.apache.commons.beanutils.PropertyUtils");
             Method propAccessor = propAccessorType.getMethod("getSimpleProperty", Object.class,

@@ -20,9 +20,9 @@ public class TreeDataMatcherTest {
 
         @Override
         protected void workOnEquivalenceAssertion(Object expected, Object actual, String pathToActual,
-                Map<String, String> pathExpectations) {
+                Map<String, String> pathExpectations, int recursionDepthRemaining) {
             if (actual == null) {
-                reportMismatch("is null", pathToActual, pathExpectations);
+                reportError("is null", pathToActual, pathExpectations);
             }
         }
     }

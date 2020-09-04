@@ -1,5 +1,6 @@
 package com.aaronicsubstances.shrewd.evolver;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.math.BigInteger;
 import java.util.ArrayList;
@@ -18,6 +19,7 @@ public class TreeDataMatcher {
     private final Object expected;
     private final String expectedDescription;
     private double realNumberComparisonTolerance = 1e-6;
+    private int maxRecursionDepth = 10;
 
     public TreeDataMatcher(Object expected) {
         this(expected, false);
@@ -40,25 +42,36 @@ public class TreeDataMatcher {
         this.realNumberComparisonTolerance = realNumberComparisonTolerance;
     }
 
+    public int getMaxRecursionDepth() {
+        return maxRecursionDepth;
+    }
+
+    public void setMaxRecursionDepth(int maxRecursionDepth) {
+        this.maxRecursionDepth = maxRecursionDepth;
+    }
+
     public void assertEquivalentTo(Object actual) {
         Map<String, String> pathExpectations = new HashMap<>();
         String actualDescription = serializeTreeNode(actual);
         String startPath = "";
         pathExpectations.put(startPath, "actual: " + actualDescription);
-        assertEquivalentTo(actual, startPath, pathExpectations);
+        assertEquivalentTo(actual, startPath, pathExpectations, maxRecursionDepth);
     }
 
     protected String serializeTreeNode(Object node) {
         return Objects.toString(node);
     }
 
+    @SuppressWarnings("unchecked")
     protected void workOnEquivalenceAssertion(Object expected, Object actual,
-            String pathToActual, Map<String, String> pathExpectations) {                
+            String pathToActual, Map<String, String> pathExpectations,
+            int recursionDepthRemaining) {                
         if (expected instanceof TreeDataMatcher) {
             // It is up to nested matcher to include full node path and expectations
             // encountered along the way in any assertion error it raises.
             TreeDataMatcher nestedMatcher = (TreeDataMatcher) expected;
-            nestedMatcher.assertEquivalentTo(actual, pathToActual, pathExpectations);
+            nestedMatcher.assertEquivalentTo(actual, pathToActual, pathExpectations, 
+                --recursionDepthRemaining);
             return;
         }
         /* Possible errors:
@@ -67,25 +80,31 @@ public class TreeDataMatcher {
             - arrays, but different lengths
             - objects, key not found
         */
-        expected = normalizeTreeNode(expected);
-        actual = normalizeTreeNode(actual);
-        TreeNodeType expectedType = getTreeNodeType(expected);
-        TreeNodeType actualType = getTreeNodeType(actual);
+        TreeNodeType expectedType = getTreeNodeType(expected, false);
+        if (expectedType == null) {
+            expected = normalizeTreeNode(expected);
+            expectedType = getTreeNodeType(expected, true);
+        }
+        TreeNodeType actualType = getTreeNodeType(actual, false);
+        if (actualType == null) {
+            actual = normalizeTreeNode(actual);
+            actualType = getTreeNodeType(actual, true);
+        }
         if (expectedType != actualType) {
             // mismatch found
             String message = String.format("expected type %s but found %s",
                 expectedType, actualType);
-            reportMismatch(message, pathToActual, pathExpectations);
+            reportError(message, pathToActual, pathExpectations);
         }
         else if (expectedType == TreeNodeType.OBJECT) {
-            Map<String, Object> expectedMap = (Map) expected;
-            Map<String, Object> actualMap = (Map) actual;
-            for (Map.Entry<String, Object> expectedEntry : expectedMap.entrySet()) {
+            Map<Object, Object> expectedMap = (Map<Object, Object>) expected;
+            Map<Object, Object> actualMap = (Map<Object, Object>) actual;
+            for (Map.Entry<Object, Object> expectedEntry : expectedMap.entrySet()) {
                 if (!actualMap.containsKey(expectedEntry.getKey())) {
                     // mismatch found
                     String message = String.format("expected object property [%s] but was not found",
                         expectedEntry.getKey());
-                    reportMismatch(message, pathToActual, pathExpectations);
+                    reportError(message, pathToActual, pathExpectations);
                     continue;
                 }
                 Object correspondingExpected = expectedEntry.getValue();
@@ -93,24 +112,25 @@ public class TreeDataMatcher {
                 workOnEquivalenceAssertion(correspondingExpected, correspondingActual, 
                     String.format("%s%s%s", pathToActual, 
                         (pathToActual.isEmpty() ? "": "."), expectedEntry.getKey()), 
-                    pathExpectations);
+                    pathExpectations, --recursionDepthRemaining);
             }
         }
         else if (expectedType == TreeNodeType.ARRAY) {
-            List<Object> expectedList = (List) expected;
-            List<Object> actualList = (List) actual;
+            List<Object> expectedList = (List<Object>) expected;
+            List<Object> actualList = (List<Object>) actual;
             if (expectedList.size() != actualList.size()) {
                 // mismatch found
                 String message = String.format("expected array length %d but found %d",
                     expectedList.size(), actualList.size());
-                reportMismatch(message, pathToActual, pathExpectations);
+                reportError(message, pathToActual, pathExpectations);
             }
             int commonSectionLength = Math.min(expectedList.size(), actualList.size());
             for (int i = 0; i < commonSectionLength; i++) {
                 Object correspondingExpected = expectedList.get(i);
                 Object correspondingActual = actualList.get(i);
                 workOnEquivalenceAssertion(correspondingExpected, correspondingActual, 
-                    String.format("%s[%d]", pathToActual, i), pathExpectations);
+                    String.format("%s[%d]", pathToActual, i), pathExpectations,
+                    --recursionDepthRemaining);
             }
         }
         else {
@@ -118,13 +138,26 @@ public class TreeDataMatcher {
                 // mismatch found
                 String message = String.format("expected [%s] but found [%s]",
                     expected, actual);
-                reportMismatch(message, pathToActual, pathExpectations);
+                reportError(message, pathToActual, pathExpectations);
             }
         }
     }
 
     protected Object normalizeTreeNode(Object node) {
-        return node;
+        try {
+            Class<?> propAccessorType = Class.forName("org.apache.commons.beanutils.PropertyUtils");
+            Method propAccessor = propAccessorType.getMethod("describe", Object.class);
+            return propAccessor.invoke(null, node);
+        }
+        catch (ClassNotFoundException ex) {
+            return node;
+        }
+        catch (Exception ex) {
+            if (ex instanceof RuntimeException) {
+                throw (RuntimeException)ex;
+            }
+            throw new RuntimeException(ex);
+        }
     }
 
     protected boolean areLeafNodesEqual(Object actual, Object expected) {
@@ -190,7 +223,7 @@ public class TreeDataMatcher {
         return ((Number) number).longValue();
     }
 
-    protected void reportMismatch(String message, String pathToActual,
+    protected void reportError(String message, String pathToActual,
             Map<String, String> pathExpectations) {
         message = wrapAssertionError(message, pathToActual, pathExpectations);
         throw new AssertionError(message);
@@ -220,7 +253,11 @@ public class TreeDataMatcher {
     }
 
     private void assertEquivalentTo(Object actual, String pathToActual,
-            Map<String, String> pathExpectations) {
+            Map<String, String> pathExpectations, int recursionDepthRemaining) {
+        if (recursionDepthRemaining <= 0) {
+            reportError("Maximum recursion depth reached", pathToActual, pathExpectations);
+            return;
+        }
         String expectation = getExpectedDescription();
         if (expectation != null && !expectation.isEmpty()) {
             // For correctness throughout recursive calls, recreate rather
@@ -232,7 +269,8 @@ public class TreeDataMatcher {
             }
             pathExpectations.put(pathToActual, previous + "expected: " + expectation);
         }
-        workOnEquivalenceAssertion(expected, actual, pathToActual, pathExpectations);
+        workOnEquivalenceAssertion(expected, actual, pathToActual, pathExpectations,
+            recursionDepthRemaining);
     }
 
     private String getExpectedDescription() {
@@ -242,7 +280,7 @@ public class TreeDataMatcher {
         return serializeTreeNode(expected);
     }
 
-    private TreeNodeType getTreeNodeType(Object node) {
+    private TreeNodeType getTreeNodeType(Object node, boolean validate) {
         if (node == null) {
             return TreeNodeType.NULL;
         }
@@ -261,6 +299,9 @@ public class TreeDataMatcher {
         }
         if (node instanceof Map) {
             return TreeNodeType.OBJECT;
+        }
+        if (!validate) {
+            return null;
         }
         throw new RuntimeException("Unsupported node type: " + node.getClass());
     }
