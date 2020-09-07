@@ -70,7 +70,56 @@ var actual = new
 };
 ```
 
-Finally subclass method hooks exist in *TreeDataMatcher* to extend its functionality.
+Finally subclass method hooks exist in *TreeDataMatcher* to extend its functionality. Such subclasses can even be conveniently hooked into a larger expected tree data structure at any point. Thus subclasses can be used at specific points only, and developer can still take advantage of existing *TreeDataMatcher* functionality every where else. 
+
+As an example of a simple subclass, one can create a subclass to match all actual values aside nulls.
+
+```cs
+class AnyNonNullMatcher : TreeDataMatcher
+{
+    public AnyNonNullMatcher():
+        base(null, "not null")
+    { }
+
+    protected override void WorkOnEquivalenceAssertion(object expected, object actual, string pathToActual,
+            Dictionary<string, string> pathExpectations, int maxRecursionDepthRemaining)
+    {
+        if (actual == null)
+        {
+            ReportError("is null", pathToActual, pathExpectations);
+        }
+    }
+}
+```
+
+This subclass can then be used at specific points where needed, so that expectation can be defined as
+
+```cs
+var expected = new
+{
+    dateCreated = "2020-09-01T09:00",
+    price = new AnyNonNullMatcher()
+};
+```
+
+and this expectation will match a tree data structure such as
+```cs
+var actual = new
+{
+    dateCreated = "2020-09-01T09:00",
+    price = 40m
+};
+```
+
+but not this
+
+```cs
+var actual = new
+{
+    dateCreated = "2020-09-01T09:00",
+    price = null
+};
+```
 
 ## LogNavigator
 
