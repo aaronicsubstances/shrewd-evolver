@@ -31,7 +31,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 return JsonConvert.SerializeObject(node);
             }
 
-            protected override void ReportMismatch(string message, string pathToActual, Dictionary<string, string> pathExpectations)
+            protected override void ReportError(string message, string pathToActual, Dictionary<string, string> pathExpectations)
             {
                 throw new XunitException(WrapAssertionError(message, pathToActual, pathExpectations));
             }
@@ -44,11 +44,11 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             { }
 
             protected override void WorkOnEquivalenceAssertion(object expected, object actual, string pathToActual,
-                    Dictionary<string, string> pathExpectations)
+                    Dictionary<string, string> pathExpectations, int maxRecursionDepthRemaining)
             {
                 if (actual == null)
                 {
-                    ReportMismatch("is null", pathToActual, pathExpectations);
+                    ReportError("is null", pathToActual, pathExpectations);
                 }
             }
         }
