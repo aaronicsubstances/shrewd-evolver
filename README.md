@@ -8,16 +8,16 @@ The following provide information on the implemented modules.
 
 ## TreeDataMatcher
 
-This module consists of a sole **TreeDataMatcher** class for comparing two tree data structures in automated tests, in which expectations are defined with anonymous objects, and actual values are deserialized from file, database or network.
+This module consists of a sole **TreeDataMatcher** class for comparing two tree data structures in automated tests, in which expectations are defined with anonymous objects, and actual values are deserialized from file, database or network. It is similar in intent to C#.NET Fluent Assertion's [object graph comparison](https://fluentassertions.com/objectgraphs/) facility, but is designed to be independent of any language programming language, by requiring clients to think in terms of tree data structures representable in JSON.
 
-Its intended use case is automated integration testing, and particularly applies to cases in which the software under test runs in a process separate from that of the test cases. Then testing can be done in two main ways:
+This module intended use case is integration testing, and particularly applies to cases in which the software under test runs in a process separate from that of the test cases. Then testing can be done in two main ways:
 
   * In an HTTP API scenario (or equivalent networked system), the tests makes network requests to the process, obtains responses, and then use *TreeDataMatcher* to compare obtained actual responses against predefined expectations.
   * In an Android phone scenario (or equivalent IOS or embedded system), logs are inserted in program and are appended to SQLite database during manual testing of mobile application process by human user. After end of testing, the automated tests are run and predefined expectations are compared with actual results recorded in the database.
 
 In the typical test case, one has to write data classes to represent expected and actual results. If using statically typed languages like Java or C#, then one has to implement equals(), hashCode() and toString() methods. And then if a test case fails, one has to take the toString() output generated for the expected and actual results, and use the eye or a diff tool to hunt down the differences. 
 
-*TreeDataMatcher* eliminates all these inconveniences. Test cases become a delight to write, especially in languages like C# in which anonymous objects are so easy to create, such as
+*TreeDataMatcher* eliminates all these inconveniences, and only requires that tree data structures be represented (or representable) with JSON data types: null, string, number, boolean, list, dictionary (or objects with properties in languages which have such a concept). Test cases become a delight to write, especially in languages like C# in which anonymous objects are so easy to create, such as
 
 ```cs
 var expected = new
