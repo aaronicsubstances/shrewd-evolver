@@ -10,14 +10,14 @@ The following provide information on the implemented modules.
 
 This module consists of a sole **TreeDataMatcher** class for comparing two tree data structures in automated tests, in which expectations are defined with anonymous objects, and actual values are deserialized from file, database or network.
 
-Its intended use case is automated integration testing, and in which the software under test runs in a process separate from that of the test cases. Then testing can be done in two main ways:
+Its intended use case is automated integration testing, and particularly applies to cases in which the software under test runs in a process separate from that of the test cases. Then testing can be done in two main ways:
 
   * In an HTTP API scenario (or equivalent networked system), the tests makes network requests to the process, obtains responses, and then use *TreeDataMatcher* to compare obtained actual responses against predefined expectations.
   * In an Android phone scenario (or equivalent IOS or embedded system), logs are inserted in program and are appended to SQLite database during manual testing of mobile application process by human user. After end of testing, the automated tests are run and predefined expectations are compared with actual results recorded in the database.
 
 In the typical test case, one has to write data classes to represent expected and actual results. If using statically typed languages like Java or C#, then one has to implement equals(), hashCode() and toString() methods. And then if a test case fails, one has to take the toString() output generated for the expected and actual results, and use the eye or a diff tool to hunt down the differences. 
 
-*TreeDataMatcher* aims to eliminate all these inconveniences, by only requiring expected and actual results to be serializable for transport and persistence. Test cases become a delight to write, especially in languages like C# in which anonymous objects are so easy to create, such as
+*TreeDataMatcher* eliminates all these inconveniences. Test cases become a delight to write, especially in languages like C# in which anonymous objects are so easy to create, such as
 
 ```cs
 var expected = new
@@ -70,7 +70,7 @@ var actual = new
 };
 ```
 
-Finally subclass method hooks exist in *TreeDataMatcher* to extend its functionality, such as for prohibiting the prescence of extraneous object fields. It is all up to the imagination of the writer of the subclass.
+Finally subclass method hooks exist in *TreeDataMatcher* to extend its functionality.
 
 ## LogNavigator
 
