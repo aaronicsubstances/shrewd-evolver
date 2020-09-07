@@ -5,12 +5,124 @@ using System.Text.RegularExpressions;
 
 namespace AaronicSubstances.ShrewdEvolver
 {
-    public class LogRecordFormatParser
+    public class LogMessageTemplateParser
     {
         internal enum FormatTokenType
         {
             LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT,
-            OPENING_SQUARE, CLOSING_SQUARE
+            OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, DESTRUCTURE,
+            AT, DOLLAR, COMMA, COLON
+        }
+
+        public class PartDescriptor
+        {
+            public string literalSection;
+            public int positionalArgIndex;
+            public IList<object> treeDataKey;
+            public bool serializeTreeData;
+
+            public PartDescriptor(string literalSection)
+            {
+                this.literalSection = literalSection;
+            }
+
+            public PartDescriptor(int positionalArgIndex)
+            {
+                this.positionalArgIndex = positionalArgIndex;
+            }
+
+            public PartDescriptor(IList<object> treeDataKey):
+                this(treeDataKey, true)
+            { }
+
+            public PartDescriptor(IList<object> treeDataKey, bool serializeTreeData)
+            {
+                this.treeDataKey = treeDataKey;
+                this.serializeTreeData = serializeTreeData;
+            }
+
+            public override int GetHashCode()
+            {
+                int hash = 3;
+                hash = 67 * hash + (literalSection != null ? literalSection.GetHashCode() : 0);
+                hash = 67 * hash + positionalArgIndex;
+                if (this.treeDataKey != null)
+                {
+                    foreach (var treeDataKeyItem in this.treeDataKey)
+                    {
+                        hash = 67 * hash + treeDataKeyItem.GetHashCode();
+                    }
+                }
+                hash = 67 * hash + (serializeTreeData ? 1 : 0);
+                return hash;
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (this == obj)
+                {
+                    return true;
+                }
+                if (obj == null)
+                {
+                    return false;
+                }
+                if (GetType() != obj.GetType())
+                {
+                    return false;
+                }
+                var other = (PartDescriptor)obj;
+                if (this.positionalArgIndex != other.positionalArgIndex)
+                {
+                    return false;
+                }
+                if (!Equals(this.literalSection, other.literalSection))
+                {
+                    return false;
+                }
+                if (this.treeDataKey == null && other.treeDataKey == null)
+                {
+                    // continue
+                }
+                else if (this.treeDataKey == null || other.treeDataKey == null)
+                {
+                    return false;
+                }
+                else
+                {
+                    if (this.treeDataKey.Count != other.treeDataKey.Count)
+                    {
+                        return false;
+                    }
+                    for (int i = 0; i < this.treeDataKey.Count; i++)
+                    {
+                        if (!Equals(this.treeDataKey[i], other.treeDataKey[i]))
+                        {
+                            return false;
+                        }
+                    }
+                }
+                if (this.serializeTreeData != other.serializeTreeData)
+                {
+                    return false;
+                }
+                return true;
+            }
+
+            public override string ToString()
+            {
+                var treeDataKeyRepr = new StringBuilder();
+                if (treeDataKey != null)
+                {
+                    treeDataKeyRepr.Append("[");
+                    treeDataKeyRepr.Append(string.Join(", ", treeDataKey));
+                    treeDataKeyRepr.Append("]");
+                }
+                return "PartDescriptor{" + "literalSection=" + literalSection +
+                    ", positionalArgIndex=" + positionalArgIndex +
+                    ", treeDataKey=" + treeDataKeyRepr +
+                    ", serializeTreeData=" + serializeTreeData + '}';
+            }
         }
 
         private static readonly Regex NEW_LINE_REGEX = new Regex("\r\n|\r|\n");
@@ -24,7 +136,7 @@ namespace AaronicSubstances.ShrewdEvolver
 
         private bool _inReplacementField = false;
 
-        public LogRecordFormatParser(string source)
+        public LogMessageTemplateParser(string source)
         {
             this.source = source;
         }
@@ -92,10 +204,10 @@ namespace AaronicSubstances.ShrewdEvolver
             }
         }
 
-        public List<object> Parse()
+        public List<PartDescriptor> Parse()
         {
-            var parts = new List<object>();
-            object part;
+            var parts = new List<PartDescriptor>();
+            PartDescriptor part;
             while ((part = ParseOnePart()) != null)
             {
                 parts.Add(part);
@@ -103,7 +215,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return parts;
         }
 
-        internal object ParseOnePart()
+        internal PartDescriptor ParseOnePart()
         {
             string token = NextToken();
             if (token == null)
@@ -113,10 +225,12 @@ namespace AaronicSubstances.ShrewdEvolver
             switch (tokenType)
             {
                 case FormatTokenType.LITERAL_STRING_SECTION:
-                    return token;
+                    return new PartDescriptor(token);
                 case FormatTokenType.BEGIN_REPLACEMENT:
+                case FormatTokenType.STRINGIFY:
+                case FormatTokenType.DESTRUCTURE:
                     _inReplacementField = true;
-                    object part = ParseReplacementField();
+                    PartDescriptor part = ParseReplacementField(tokenType != FormatTokenType.STRINGIFY);
                     _inReplacementField = false;
                     return part;
                 case FormatTokenType.END_REPLACEMENT:
@@ -140,7 +254,8 @@ namespace AaronicSubstances.ShrewdEvolver
                 {
                     char ch = source[endPos];
                     if (ch == '{' || ch == '}' || ch == '.' ||
-                            ch == '[' || ch == ']')
+                        ch == '[' || ch == ']' || ch == '$' ||
+                        ch == '@' || ch == ',' || ch == ':')
                     {
                         break;
                     }
@@ -171,6 +286,18 @@ namespace AaronicSubstances.ShrewdEvolver
                             break;
                         case '.':
                             tokenType = FormatTokenType.DOT;
+                            break;
+                        case ':':
+                            tokenType = FormatTokenType.COLON;
+                            break;
+                        case ',':
+                            tokenType = FormatTokenType.COMMA;
+                            break;
+                        case '@':
+                            tokenType = FormatTokenType.AT;
+                            break;
+                        case '$':
+                            tokenType = FormatTokenType.DOLLAR;
                             break;
                         default:
                             throw CreateParseError("Unexpected char: " + ch, true);
@@ -219,7 +346,27 @@ namespace AaronicSubstances.ShrewdEvolver
                     switch (ch)
                     {
                         case '{':
-                            tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                            if (endPos < source.Length)
+                            {
+                                switch (source[endPos])
+                                {
+                                    case '@':
+                                        tokenType = FormatTokenType.DESTRUCTURE;
+                                        endPos++;
+                                        break;
+                                    case '$':
+                                        tokenType = FormatTokenType.STRINGIFY;
+                                        endPos++;
+                                        break;
+                                    default:
+                                        tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                                        break;
+                                }
+                            }
+                            else
+                            {
+                                tokenType = FormatTokenType.BEGIN_REPLACEMENT;
+                            }
                             break;
                         case '}':
                             tokenType = FormatTokenType.END_REPLACEMENT;
@@ -232,7 +379,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return token.ToString();
         }
 
-        private object ParseReplacementField()
+        private PartDescriptor ParseReplacementField(bool serializeTreeData)
         {
             var treeDataKey = new List<object>();
             while (true)
@@ -251,7 +398,7 @@ namespace AaronicSubstances.ShrewdEvolver
                     int? notTreeDataKeyButIndex = ParsePositionalIndex(token);
                     if (notTreeDataKeyButIndex != null)
                     {
-                        return notTreeDataKeyButIndex.Value;
+                        return new PartDescriptor(notTreeDataKeyButIndex.Value);
                     }
                 }
                 switch (tokenType)
@@ -286,7 +433,7 @@ namespace AaronicSubstances.ShrewdEvolver
                         throw CreateParseError("Unexpected token: " + token);
                 }
             }
-            return treeDataKey;
+            return new PartDescriptor(treeDataKey, serializeTreeData);
         }
 
         private int? ParsePositionalIndex(string token)

@@ -3,20 +3,21 @@ using System.Collections.Generic;
 using System.Text;
 using Xunit;
 using Xunit.Abstractions;
+using static AaronicSubstances.ShrewdEvolver.LogMessageTemplateParser;
 using static AaronicSubstances.ShrewdEvolver.UnitTests.TestUtils;
 
 namespace AaronicSubstances.ShrewdEvolver.UnitTests
 {
-    public class LogRecordFormatParserTest
+    public class LogMessageTemplateParserTest
     {
         public class TokenPart
         {
-            internal object part;
+            internal PartDescriptor part;
             internal readonly bool isReplacementField;
             internal readonly int startPos;
             internal readonly int endPos;
 
-            public TokenPart(object part, bool isReplacementField, int startPos, int endPos)
+            public TokenPart(PartDescriptor part, bool isReplacementField, int startPos, int endPos)
             {
                 this.part = part;
                 this.isReplacementField = isReplacementField;
@@ -33,7 +34,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 }
 
                 var other = (TokenPart)obj;
-                if (!CollectionWrapper.ComputeEquals(other.part, part))
+                if (!Equals(other.part, part))
                 {
                     return false;
                 }
@@ -50,14 +51,14 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
             public override string ToString()
             {
-                return "TokenPart{part=" + CollectionWrapper.ComputeStringRepr(part) + ", isReplacementField=" + isReplacementField +
+                return "TokenPart{part=" + part + ", isReplacementField=" + isReplacementField +
                     ", startPos=" + startPos + ", endPos=" + endPos + "}";
             }
         }
 
         private readonly ITestOutputHelper _output;
 
-        public LogRecordFormatParserTest(ITestOutputHelper output)
+        public LogMessageTemplateParserTest(ITestOutputHelper output)
         {
             _output = output;
         }
@@ -68,7 +69,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             int expLineNumber, int expColumnNumber)
         {
             int[] expected = new int[] { expLineNumber, expColumnNumber };
-            int[] actual = LogRecordFormatParser.CalculateLineAndColumnNumbers(s, pos);
+            int[] actual = LogMessageTemplateParser.CalculateLineAndColumnNumbers(s, pos);
             Assert.Equal(expected, actual);
         }
 
@@ -123,15 +124,15 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
         [MemberData(nameof(CreateTestParseOnePartData))]
         public void TestParseOnePart(string source, List<TokenPart> expected)
         {
-            LogRecordFormatParser tokenizer = new LogRecordFormatParser(source);
-            object part;
+            LogMessageTemplateParser tokenizer = new LogMessageTemplateParser(source);
+            PartDescriptor part;
             var actual = new List<TokenPart>();
             while ((part = tokenizer.ParseOnePart()) != null)
             {
-                Assert.Contains(tokenizer.tokenType, ToList(LogRecordFormatParser.FormatTokenType.LITERAL_STRING_SECTION,
-                    LogRecordFormatParser.FormatTokenType.END_REPLACEMENT));
+                Assert.Contains(tokenizer.tokenType, ToList(FormatTokenType.LITERAL_STRING_SECTION,
+                    FormatTokenType.END_REPLACEMENT));
                 TokenPart partDescriptor = new TokenPart(part,
-                    tokenizer.tokenType == LogRecordFormatParser.FormatTokenType.END_REPLACEMENT,
+                    tokenizer.tokenType == FormatTokenType.END_REPLACEMENT,
                     tokenizer.partStart, tokenizer.endPos);
                 actual.Add(partDescriptor);
             }
@@ -144,65 +145,80 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             {
                 new object[]{ "", ToGenericList<TokenPart>() },
                 new object[]{ " ", ToGenericList(
-                    new TokenPart(" ", false, 0, 1)
+                    new TokenPart(new PartDescriptor(" "), false, 0, 1)
                     ) },
                 new object[]{ "xyz", ToGenericList(
-                    new TokenPart("xyz", false, 0, 3)
+                    new TokenPart(new PartDescriptor("xyz"), false, 0, 3)
                     ) },
                 new object[]{ "x{{}}{{yz", ToGenericList(
-                    new TokenPart("x{}{yz", false, 0, 9)
+                    new TokenPart(new PartDescriptor("x{}{yz"), false, 0, 9)
                     ) },
                 new object[]{ "x{}{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList(), true, 1, 3),
-                    new TokenPart("{yz", false, 3, 7)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList()), true, 1, 3),
+                    new TokenPart(new PartDescriptor("{yz"), false, 3, 7)
                     ) },
                 new object[]{ "x{0}{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(0, true, 1, 4),
-                    new TokenPart("{yz", false, 4, 8)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(0), true, 1, 4),
+                    new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
+                    ) },
+                new object[]{ "x{$0}{{yz", ToGenericList(
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(0), true, 1, 5),
+                    new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
                     ) },
                 new object[]{ "x{a}{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList("a"), true, 1, 4),
-                    new TokenPart("{yz", false, 4, 8)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("a")), true, 1, 4),
+                    new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
+                    ) },
+                new object[]{ "x{$a}{{yz", ToGenericList(
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("a"), false), true, 1, 5),
+                    new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
                     ) },
                 new object[]{ "x{.0}{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList("0"), true, 1, 5),
-                    new TokenPart("{yz", false, 5, 9)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("0")), true, 1, 5),
+                    new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                    ) },
+                new object[]{ "x{$.0}{{yz", ToGenericList(
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("0"), false), true, 1, 6),
+                    new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
                     ) },
 
                 // test previous 4 again, but with whitespace tolerance.
                 new object[]{ "x{ }{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList(), true, 1, 4),
-                    new TokenPart("{yz", false, 4, 8)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList()), true, 1, 4),
+                    new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
                     ) },
                 new object[]{ "x{ 0 }{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(0, true, 1, 6),
-                    new TokenPart("{yz", false, 6, 10)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(0), true, 1, 6),
+                    new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
                     ) },
                 new object[]{ "x{a  }{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList("a"), true, 1, 6),
-                    new TokenPart("{yz", false, 6, 10)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("a")), true, 1, 6),
+                    new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
                     ) },
                 new object[]{ "x{ . 0 }{{yz", ToGenericList(
-                    new TokenPart("x", false, 0, 1),
-                    new TokenPart(ToList("0"), true, 1, 8),
-                    new TokenPart("{yz", false, 8, 12)
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(ToList("0")), true, 1, 8),
+                    new TokenPart(new PartDescriptor("{yz"), false, 8, 12)
                     ) },
 
                 // handle longer replacement fields.
                 new object[]{ "{bag .prices[0 ]}", ToGenericList(
-                    new TokenPart(ToList("bag", "prices", 0), true, 0, 17)
+                    new TokenPart(new PartDescriptor(ToList("bag", "prices", 0)), true, 0, 17)
                     ) },
                 new object[]{ "{ -12 }{ [10][-2] }{ y.z }", ToGenericList(
-                    new TokenPart(-12, true, 0, 7),
-                    new TokenPart(ToList(10, -2), true, 7, 19),
-                    new TokenPart(ToList("y", "z"), true, 19, 26)
+                    new TokenPart(new PartDescriptor(-12), true, 0, 7),
+                    new TokenPart(new PartDescriptor(ToList(10, -2)), true, 7, 19),
+                    new TokenPart(new PartDescriptor(ToList("y", "z")), true, 19, 26)
                     ) }
             };
         }
@@ -212,17 +228,17 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
         [MemberData(nameof(CreateTestParseData))]
         public void TestParse(int index, string source, List<object> expected)
         {
-            List<object> actual = null;
+            List<PartDescriptor> actual = null;
             try
             {
-                var instance = new LogRecordFormatParser(source);
+                var instance = new LogMessageTemplateParser(source);
                 actual = instance.Parse();
             }
             catch (Exception ex)
             {
                 _output.WriteLine((index + 1) + ". " + ex);
             }
-            Assert.Equal(actual, expected);
+            Assert.Equal(new CollectionWrapper(actual), new CollectionWrapper(expected));
         }
 
         public static List<object[]> CreateTestParseData()
@@ -233,9 +249,10 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 new object[]{ index++, "{", null },
                 new object[]{ index++, "}", null },
                 new object[]{ index++, "{0", null },
-                new object[]{ index++, "{a}", ToList(ToList("a")) },
+                new object[]{ index++, "{a}", ToList(new PartDescriptor(ToList("a"))) },
                 new object[]{ index++, "a{.0.[2]}b", null },
                 new object[]{ index++, "a{.}b", null },
+                new object[]{ index++, "a{.a$}b", null },
                 new object[]{ index++, "a{.{b", null },
                 new object[]{ index++, "a{.x{b", null },
                 new object[]{ index++, "a{[0}b", null },
@@ -243,22 +260,31 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 new object[]{ index++, "a{.0]}b", null },
                 new object[]{ index++, "a{[]}b", null },
                 new object[]{ index++, "a{[x]}b", null },
-                new object[]{ index++, "a{[200]}b", ToList("a", ToList(200), "b") },
-                new object[]{ index++, " a { x.data [ 200 ] [ 300 ] . q . z } b", ToList(" a ",
-                    ToList("x", "data", 200, 300, "q", "z"), " b") },
+                new object[]{ index++, "a{[200]}b", ToList(new PartDescriptor("a"), 
+                    new PartDescriptor(ToList(200)), new PartDescriptor("b")) },
+                new object[]{ index++, "a{ $ [ 200]}b", null },
+                new object[]{ index++, "a{$ [ 200]}b", ToList(new PartDescriptor("a"),
+                    new PartDescriptor(ToList(200), false), new PartDescriptor("b")) },
+                new object[]{ index++, " a { x.data [ 200 ] [ 300 ] . q . z } b", ToList(new PartDescriptor(" a "),
+                    new PartDescriptor(ToList("x", "data", 200, 300, "q", "z")), 
+                    new PartDescriptor(" b")) },
                 new object[]{ index++, "", ToList() },
-                new object[]{ index++, "{}", ToList(ToList()) },
-                new object[]{ index++, ".[]", ToList(".[]") },
-                new object[]{ index++, ".{{{{x}}}}", ToList(".{{x}}") },
-                new object[]{ index++, "0", ToList("0") },
-                new object[]{ index++, "{{0}}", ToList("{0}") },
-                new object[]{ index++, "{0}", ToList(0) },
-                new object[]{ index++, "{[0]}", ToList(ToList(0)) },
+                new object[]{ index++, "{}", ToList(new PartDescriptor(ToList())) },
+                new object[]{ index++, "{$}", ToList(new PartDescriptor(ToList(), false)) },
+                new object[]{ index++, ".[]", ToList(new PartDescriptor(".[]")) },
+                new object[]{ index++, ".{{{{x}}}}", ToList(new PartDescriptor(".{{x}}")) },
+                new object[]{ index++, "0", ToList(new PartDescriptor("0")) },
+                new object[]{ index++, "{{0}}", ToList(new PartDescriptor("{0}")) },
+                new object[]{ index++, "{0}", ToList(new PartDescriptor(0)) },
+                new object[]{ index++, "{$0}", ToList(new PartDescriptor(0)) },
+                new object[]{ index++, "{[0]}", ToList(new PartDescriptor(ToList(0))) },
+                new object[]{ index++, "{$[0]}", ToList(new PartDescriptor(ToList(0), false)) },
 
                 // test with newlines
-                new object[]{ index++, "{[\n0]\n}", ToList(ToList(0)) },
-                new object[]{ index++, "\nThere is plenty{\n}\n of peace\n", ToList("\nThere is plenty", ToList(),
-                    "\n of peace\n") },
+                new object[]{ index++, "{[\n0]\n}", ToList(new PartDescriptor(ToList(0))) },
+                new object[]{ index++, "\nThere is plenty{\n}\n of peace\n", 
+                    ToList(new PartDescriptor("\nThere is plenty"), new PartDescriptor(ToList()),
+                        new PartDescriptor("\n of peace\n")) },
                 new object[]{ index++, "{[0]}\nfirst\nsecond{a}}r{y}", null }
             };
         }
