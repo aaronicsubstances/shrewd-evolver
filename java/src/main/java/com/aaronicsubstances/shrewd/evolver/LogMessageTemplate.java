@@ -40,17 +40,17 @@ public class LogMessageTemplate {
         }
     }
 
+    private final Object keywordArgs;
     private final List<Object> positionalArgs;
-    private final Object treeData;
 
     // Contents are literal string, index into positional arg, or
     // treeDataKey, which is list of objects as path into treeData.
     // Each part of treeDataKey in turn consists of JSON property name, or index into JSON array.
     private final List<PartDescriptor> parsedFormatString;
 
-    public LogMessageTemplate(String formatString, Object treeData,
+    public LogMessageTemplate(String formatString, Object keywordArgs,
             List<Object> positionalArgs) {
-        this.treeData = treeData;
+        this.keywordArgs = keywordArgs;
         this.positionalArgs = positionalArgs;
         this.parsedFormatString = parseFormatString(formatString);
     }
@@ -64,10 +64,10 @@ public class LogMessageTemplate {
     }
 
     public Object toStructuredLogRecord() {
-        return toStructuredLogRecord(treeData);
+        return toStructuredLogRecord(keywordArgs);
     }
 
-    public Object toUnstructuredLogRecord() {
+    public Unstructured toUnstructuredLogRecord() {
         List<Object> formatArgs = new ArrayList<>();
         String formatString = generateFormatString(formatArgs, true);
         return new Unstructured(formatString, formatArgs);
@@ -187,8 +187,8 @@ public class LogMessageTemplate {
         for (PartDescriptor part : parsedFormatString) {
             if (part.treeDataKey != null) {
                 logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
-                Object treeDataSlice = getTreeDataSlice(treeData, part.treeDataKey);
-                if (part.serializeTreeData) {
+                Object treeDataSlice = getTreeDataSlice(keywordArgs, part.treeDataKey);
+                if (part.serialize) {
                     formatArgsReceiver.add(toStructuredLogRecord(treeDataSlice));
                 }
                 else {
@@ -201,7 +201,12 @@ public class LogMessageTemplate {
             else {
                 logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
                 Object item = getPositionalArg(positionalArgs, part.positionalArgIndex);
-                formatArgsReceiver.add(item);
+                if (part.serialize) {
+                    formatArgsReceiver.add(toStructuredLogRecord(item));
+                }
+                else {
+                    formatArgsReceiver.add(item);
+                }
             }
         }
         return logFormat.toString();

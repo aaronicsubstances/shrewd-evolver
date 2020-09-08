@@ -148,6 +148,11 @@ public class LogMessageTemplateParserTest {
                 new TokenPart(new PartDescriptor(0), true, 1, 5),
                 new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
                 ) },
+            { "x{@0}{{yz", asList(
+                new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                new TokenPart(new PartDescriptor(0, true), true, 1, 5),
+                new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                ) },
             { "x{a}{{yz", asList(
                 new TokenPart(new PartDescriptor("x"), false, 0, 1),
                 new TokenPart(new PartDescriptor(asList("a")), true, 1, 4),
@@ -251,6 +256,7 @@ public class LogMessageTemplateParserTest {
             { index++, "{{0}}", asList(new PartDescriptor("{0}")) },
             { index++, "{0}", asList(new PartDescriptor(0)) },
             { index++, "{$0}", asList(new PartDescriptor(0)) },
+            { index++, "{@2}", asList(new PartDescriptor(2, true)) },
             { index++, "{[0]}", asList(new PartDescriptor(asList(0))) },
             { index++, "{$[0]}", asList(new PartDescriptor(asList(0), false)) },
 

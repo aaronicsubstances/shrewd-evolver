@@ -1,11 +1,10 @@
 package com.aaronicsubstances.shrewd.evolver;
 
 import java.util.List;
+import java.util.stream.Collectors;
 
 import static java.util.Arrays.asList;
 import static com.aaronicsubstances.shrewd.evolver.TestUtils.toMap;
-
-import com.google.gson.Gson;
 
 import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
@@ -15,15 +14,25 @@ import static org.testng.Assert.*;
 public class LogMessageTemplateTest {
 
     public static class EmbeddableLogRecordImpl extends LogMessageTemplate {
-        private static final Gson JSON = new Gson();
-
-        public EmbeddableLogRecordImpl(String formatString, Object treeData,
-                List<Object> positionalArgs) {
+        
+        public EmbeddableLogRecordImpl(String formatString, Object treeData, List<Object> positionalArgs) {
             super(formatString, treeData, positionalArgs);
         }
 
-        protected String serializeData(Object treeDataSlice) {
-            return JSON.toJson(treeDataSlice);
+        @Override
+        protected String escapeLiteral(String literal, boolean forLogger) {
+            if (forLogger) {
+                return literal.replace("{", "\\{");
+            }
+            return super.escapeLiteral(literal, forLogger);
+        }
+
+        @Override
+        protected String generatePositionIndicator(int position, boolean forLogger) {
+            if (forLogger) {
+                return "{}";
+            }
+            return super.generatePositionIndicator(position, forLogger);
         }
     }
     
@@ -82,6 +91,71 @@ public class LogMessageTemplateTest {
             { asList(1, 2), 2,  null },
             { asList(1, 2), -2,  null },
             { asList(1, 2), -20,  null }
+        };
+    }
+
+    @Test(dataProvider = "createTestToUnstructuredLogRecordData")
+    public void testToUnstructuredLogRecord(String messageTemplate, Object keywordArgs,
+            List<Object> positionalArgs,
+            String expectedFormat, List<String> expectedFormatArgs) {
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl(messageTemplate, keywordArgs,
+            positionalArgs);
+        LogMessageTemplate.Unstructured output = instance.toUnstructuredLogRecord();
+        String actualFormat = output.getFormatString();
+        assertEquals(actualFormat, expectedFormat);
+        List<String> actualFormatArgs = output.getFormatArgs().stream()
+            .map(x -> x.toString()).collect(Collectors.toList());
+        assertEquals(actualFormatArgs, expectedFormatArgs);
+    }
+
+    @DataProvider
+    public Object[][] createTestToUnstructuredLogRecordData() {
+        return new Object[][]{
+            { "", toMap(), asList(), "", asList() },
+            { "{a}{0}", toMap("a", "yes"), asList(1), "{}{}", asList("\"yes\"", "1") },
+            { "{}{0}", toMap("a", "yes"), asList("1"), "{}{}", asList("{\"a\":\"yes\"}", "1") },
+            { "{$}{$0}", toMap("a", "yes"), asList("1"), "{}{}", asList("{a=yes}", "1") },
+            { "{@}{@0}", toMap("a", "yes"), asList("1"), "{}{}", asList("{\"a\":\"yes\"}", "\"1\"") }
+        };
+    }
+
+    @Test(dataProvider = "createTestToStructuredLogRecordData")
+    public void testToStructuredLogRecord(String messageTemplate, Object keywordArgs,
+            List<Object> positionalArgs, String expected) {
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl(messageTemplate, keywordArgs,
+            positionalArgs);
+        Object actual = instance.toStructuredLogRecord().toString();
+        assertEquals(actual, expected);
+    }
+
+    @DataProvider
+    public Object[][] createTestToStructuredLogRecordData() {
+        return new Object[][]{
+            { "", toMap(), asList(), "{}" },
+            { "{a}{0}", toMap("a", "yes"), null, "{\"a\":\"yes\"}" },
+            { "{}{0}", toMap("a", "yes", "b", 2), null, "{\"a\":\"yes\",\"b\":2}" },
+            { "{$}{$0}", asList("a", "yes"), null, "[\"a\",\"yes\"]" },
+            { "{@}{@0}", "yes", null, "\"yes\"" }
+        };
+    }
+
+    @Test(dataProvider = "createTestToStringData")
+    public void testToString(String messageTemplate, Object keywordArgs,
+            List<Object> positionalArgs, String expected) {
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl(messageTemplate, keywordArgs,
+            positionalArgs);
+        String actual = instance.toString();
+        assertEquals(actual, expected);
+    }
+
+    @DataProvider
+    public Object[][] createTestToStringData() {
+        return new Object[][]{
+            { "", toMap(), asList(), "" },
+            { "{a}{0}", toMap("a", "yes"), asList(1), "\"yes\"1" },
+            { "{}{0}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}1" },
+            { "{$}{$0}", toMap("a", "yes"), asList("1"), "{a=yes}1" },
+            { "{@}{@0}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}\"1\"" }
         };
     }
 }

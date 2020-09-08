@@ -10,7 +10,7 @@ public class LogMessageTemplateParser {
 
     enum FormatTokenType {
         LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT, 
-        OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, DESTRUCTURE,
+        OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, SERIALIZE,
         AT, DOLLAR, COMMA, COLON
     }
 
@@ -18,23 +18,28 @@ public class LogMessageTemplateParser {
         public String literalSection;
         public int positionalArgIndex;
         public List<Object> treeDataKey;
-        public boolean serializeTreeData;
+        public boolean serialize;
 
         public PartDescriptor(String literalSection) {
             this.literalSection = literalSection;
         }
 
         public PartDescriptor(int positionalArgIndex) {
+            this(positionalArgIndex, false);
+        }
+
+        public PartDescriptor(int positionalArgIndex, boolean serialize) {
             this.positionalArgIndex = positionalArgIndex;
+            this.serialize = serialize;
         }
 
         public PartDescriptor(List<Object> treeDataKey) {
             this(treeDataKey, true);
         }
 
-        public PartDescriptor(List<Object> treeDataKey, boolean serializeTreeData) {
+        public PartDescriptor(List<Object> treeDataKey, boolean serialize) {
             this.treeDataKey = treeDataKey;
-            this.serializeTreeData = serializeTreeData;
+            this.serialize = serialize;
         }
 
         @Override
@@ -43,7 +48,7 @@ public class LogMessageTemplateParser {
             hash = 67 * hash + Objects.hashCode(this.literalSection);
             hash = 67 * hash + this.positionalArgIndex;
             hash = 67 * hash + Objects.hashCode(this.treeDataKey);
-            hash = 67 * hash + (this.serializeTreeData ? 1 : 0);
+            hash = 67 * hash + (this.serialize ? 1 : 0);
             return hash;
         }
 
@@ -68,7 +73,7 @@ public class LogMessageTemplateParser {
             if (!Objects.equals(this.treeDataKey, other.treeDataKey)) {
                 return false;
             }
-            if (this.serializeTreeData != other.serializeTreeData) {
+            if (this.serialize != other.serialize) {
                 return false;
             }
             return true;
@@ -79,7 +84,7 @@ public class LogMessageTemplateParser {
             return "PartDescriptor{" + "literalSection=" + literalSection +
                 ", positionalArgIndex=" + positionalArgIndex +
                 ", treeDataKey=" + treeDataKey + 
-                ", serializeTreeData=" + serializeTreeData + '}';
+                ", serialize=" + serialize + '}';
         }
     }
     
@@ -170,9 +175,9 @@ public class LogMessageTemplateParser {
                 return new PartDescriptor(token);
             case BEGIN_REPLACEMENT:
             case STRINGIFY:
-            case DESTRUCTURE:
+            case SERIALIZE:
                 inReplacementField = true;
-                PartDescriptor part = parseReplacementField(tokenType != FormatTokenType.STRINGIFY);
+                PartDescriptor part = parseReplacementField(tokenType);
                 inReplacementField = false;
                 return part;
             case END_REPLACEMENT:
@@ -272,7 +277,7 @@ public class LogMessageTemplateParser {
                         if (endPos < source.length()) {
                             switch (source.charAt(endPos)) {
                                 case '@':
-                                    tokenType = FormatTokenType.DESTRUCTURE;
+                                    tokenType = FormatTokenType.SERIALIZE;
                                     endPos++;
                                     break;
                                 case '$':
@@ -299,7 +304,7 @@ public class LogMessageTemplateParser {
         return token.toString();
     }
 
-    private PartDescriptor parseReplacementField(boolean serializeTreeData) {
+    private PartDescriptor parseReplacementField(FormatTokenType startTokenType) {
         List<Object> treeDataKey = new ArrayList<>();
         while (true) {
             String token = nextToken();
@@ -312,7 +317,9 @@ public class LogMessageTemplateParser {
             if (treeDataKey.isEmpty() && tokenType == FormatTokenType.LITERAL_STRING_SECTION) {
                 Integer notTreeDataKeyButIndex = parsePositionalIndex(token);
                 if (notTreeDataKeyButIndex != null) {
-                    return new PartDescriptor(notTreeDataKeyButIndex);
+                    // stringify positional arguments by default.
+                    return new PartDescriptor(notTreeDataKeyButIndex, 
+                        startTokenType == FormatTokenType.SERIALIZE);
                 }
             }
             switch (tokenType) { 
@@ -337,13 +344,12 @@ public class LogMessageTemplateParser {
                     break;
                 case CLOSING_SQUARE:
                     throw createParseError("Single ']' encountered in replacement field");
-                case BEGIN_REPLACEMENT:
-                    throw createParseError("invalid '{' in replacement field");
                 default:
-                    throw createParseError("Unexpected token: " + token);
+                    throw createParseError("invalid '" + token + "' in replacement field");
             }
         }
-        return new PartDescriptor(treeDataKey, serializeTreeData);
+        // serialize keyword arguments by default.
+        return new PartDescriptor(treeDataKey, startTokenType != FormatTokenType.STRINGIFY);
     }
 
     private Integer parsePositionalIndex(String token) {
