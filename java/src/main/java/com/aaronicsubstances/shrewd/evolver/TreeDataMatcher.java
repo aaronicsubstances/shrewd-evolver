@@ -71,7 +71,7 @@ public class TreeDataMatcher {
             // encountered along the way in any assertion error it raises.
             TreeDataMatcher nestedMatcher = (TreeDataMatcher) expected;
             nestedMatcher.assertEquivalentTo(actual, pathToActual, pathExpectations, 
-                --recursionDepthRemaining);
+                recursionDepthRemaining - 1);
             return;
         }
         /* Possible errors:
@@ -112,7 +112,7 @@ public class TreeDataMatcher {
                 workOnEquivalenceAssertion(correspondingExpected, correspondingActual, 
                     String.format("%s%s%s", pathToActual, 
                         (pathToActual.isEmpty() ? "": "."), expectedEntry.getKey()), 
-                    pathExpectations, --recursionDepthRemaining);
+                    pathExpectations, recursionDepthRemaining - 1);
             }
         }
         else if (expectedType == TreeNodeType.ARRAY) {
@@ -130,7 +130,7 @@ public class TreeDataMatcher {
                 Object correspondingActual = actualList.get(i);
                 workOnEquivalenceAssertion(correspondingExpected, correspondingActual, 
                     String.format("%s[%d]", pathToActual, i), pathExpectations,
-                    --recursionDepthRemaining);
+                    recursionDepthRemaining - 1);
             }
         }
         else {

@@ -30,13 +30,21 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
         public static bool ComputeEquals(object obj1, object obj2)
         {
-            if (!((obj1 is ICollection || obj1 is CollectionWrapper) && (obj2 is ICollection || obj2 is CollectionWrapper)))
+            if (obj1 is CollectionWrapper)
+            {
+                obj1 = ((CollectionWrapper)obj1)._wrapped;
+            }
+            if (obj2 is CollectionWrapper)
+            {
+                obj2 = ((CollectionWrapper)obj2)._wrapped;
+            }
+            if (!(obj1 is ICollection && obj2 is ICollection))
             {
                 return (obj1 is null ? obj2 is null : obj1.Equals(obj2));
             }
 
-            var collection1 = (obj1 is ICollection) ? (ICollection)obj1 : ((CollectionWrapper)obj1)._wrapped;
-            var collection2 = (obj2 is ICollection) ? (ICollection)obj2 : ((CollectionWrapper)obj2)._wrapped;
+            var collection1 = (ICollection)obj1;
+            var collection2 = (ICollection)obj2;
             if (collection1.Count != collection2.Count)
             {
                 return false;
@@ -57,11 +65,15 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
         public static int ComputeHashCode(object obj)
         {
-            if (!(obj is ICollection || obj is CollectionWrapper))
+            if (obj is CollectionWrapper)
+            {
+                obj = ((CollectionWrapper)obj)._wrapped;
+            }
+            if (!(obj is ICollection))
             {
                 return obj is null ? 0 : obj.GetHashCode();
             }
-            var collection = obj is ICollection ? (ICollection)obj : ((CollectionWrapper)obj)._wrapped;
+            var collection = (ICollection)obj;
             int hashCode = 1;
             foreach (object item in collection)
             {
@@ -73,11 +85,15 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
         public static string ComputeStringRepr(object obj)
         {
-            if (!(obj is ICollection || obj is CollectionWrapper))
+            if (obj is CollectionWrapper)
+            {
+                obj = ((CollectionWrapper)obj)._wrapped;
+            }
+            if (!(obj is ICollection))
             {
                 return obj is null ? "" : obj.ToString();
             }
-            var collection = obj is ICollection ? (ICollection)obj : ((CollectionWrapper)obj)._wrapped;
+            var collection = (ICollection)obj;
             var str = new StringBuilder();
             var iterationStarted = false;
             var iterator = collection.GetEnumerator();

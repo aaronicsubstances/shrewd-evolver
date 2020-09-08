@@ -20,7 +20,7 @@ namespace AaronicSubstances.ShrewdEvolver
         private readonly string _expectedDescription;
 
         public TreeDataMatcher(object expected):
-            this(expected, false) 
+            this(expected, false)
         {}
 
         public TreeDataMatcher(object expected, bool generateDescription):
@@ -35,13 +35,15 @@ namespace AaronicSubstances.ShrewdEvolver
 
         public double RealNumberComparisonTolerance { get; set; } = 1e-6;
 
+        public int MaxRecursionDepth { get; set; } = 10;
+
         public void AssertEquivalentTo(object actual)
         {
             var pathExpectations = new Dictionary<string, string>();
             string actualDescription = SerializeTreeNode(actual);
             string startPath = "";
             pathExpectations[startPath] = "actual: " + actualDescription;
-            AssertEquivalentTo(actual, startPath, pathExpectations);
+            AssertEquivalentTo(actual, startPath, pathExpectations, MaxRecursionDepth);
         }
 
         protected virtual string SerializeTreeNode(object node)
@@ -50,14 +52,16 @@ namespace AaronicSubstances.ShrewdEvolver
         }
 
         protected virtual void WorkOnEquivalenceAssertion(object expected, object actual,
-                string pathToActual, Dictionary<string, string> pathExpectations)
+                string pathToActual, Dictionary<string, string> pathExpectations,
+                int recursionDepthRemaining)
         {
             if (expected is TreeDataMatcher)
             {
                 // It is up to nested matcher to include full node path and expectations
                 // encountered along the way in any assertion error it raises.
                 var nestedMatcher = (TreeDataMatcher)expected;
-                nestedMatcher.AssertEquivalentTo(actual, pathToActual, pathExpectations);
+                nestedMatcher.AssertEquivalentTo(actual, pathToActual, pathExpectations,
+                    recursionDepthRemaining - 1);
                 return;
             }
             /* Possible errors:
@@ -66,16 +70,24 @@ namespace AaronicSubstances.ShrewdEvolver
                 - arrays, but different lengths
                 - objects, key not found
             */
-            expected = NormalizeTreeNode(expected);
-            actual = NormalizeTreeNode(actual);
-            TreeNodeType expectedType = GetTreeNodeType(expected);
-            TreeNodeType actualType = GetTreeNodeType(actual);
+            TreeNodeType? expectedType = GetTreeNodeType(expected, false);
+            if (expectedType == null)
+            {
+                expected = NormalizeTreeNode(expected);
+                expectedType = GetTreeNodeType(expected, true);
+            }
+            TreeNodeType? actualType = GetTreeNodeType(actual, false);
+            if (actualType == null)
+            {
+                actual = NormalizeTreeNode(actual);
+                actualType = GetTreeNodeType(actual, true);
+            }
             if (expectedType != actualType)
             {
                 // mismatch found
                 string message = string.Format("expected type {0} but found {1}",
                     expectedType, actualType);
-                ReportMismatch(message, pathToActual, pathExpectations);
+                ReportError(message, pathToActual, pathExpectations);
             }
             else if (expectedType == TreeNodeType.OBJECT)
             {
@@ -88,7 +100,7 @@ namespace AaronicSubstances.ShrewdEvolver
                         // mismatch found
                         string message = string.Format("expected object property [{0}] but was not found",
                             expectedEntry.Key);
-                        ReportMismatch(message, pathToActual, pathExpectations);
+                        ReportError(message, pathToActual, pathExpectations);
                         continue;
                     }
                     object correspondingExpected = expectedEntry.Value;
@@ -96,7 +108,7 @@ namespace AaronicSubstances.ShrewdEvolver
                     WorkOnEquivalenceAssertion(correspondingExpected, correspondingActual,
                         string.Format("{0}{1}{2}", pathToActual,
                             (pathToActual.Length == 0 ? "" : "."), expectedEntry.Key),
-                        pathExpectations);
+                        pathExpectations, recursionDepthRemaining - 1);
                 }
             }
             else if (expectedType == TreeNodeType.ARRAY)
@@ -108,7 +120,7 @@ namespace AaronicSubstances.ShrewdEvolver
                     // mismatch found
                     string message = string.Format("expected array length {0} but found {1}",
                         expectedList.Count, actualList.Count);
-                    ReportMismatch(message, pathToActual, pathExpectations);
+                    ReportError(message, pathToActual, pathExpectations);
                 }
                 int commonSectionLength = Math.Min(expectedList.Count, actualList.Count);
                 for (int i = 0; i < commonSectionLength; i++)
@@ -116,7 +128,8 @@ namespace AaronicSubstances.ShrewdEvolver
                     object correspondingExpected = expectedList[i];
                     object correspondingActual = actualList[i];
                     WorkOnEquivalenceAssertion(correspondingExpected, correspondingActual,
-                        string.Format("{0}[{1}]", pathToActual, i), pathExpectations);
+                        string.Format("{0}[{1}]", pathToActual, i), pathExpectations,
+                        recursionDepthRemaining - 1);
                 }
             }
             else
@@ -126,14 +139,19 @@ namespace AaronicSubstances.ShrewdEvolver
                     // mismatch found
                     string message = string.Format("expected [{0}] but found [{1}]",
                         expected, actual);
-                    ReportMismatch(message, pathToActual, pathExpectations);
+                    ReportError(message, pathToActual, pathExpectations);
                 }
             }
         }
 
         protected virtual object NormalizeTreeNode(object node)
         {
-            return node;
+            var props = new Dictionary<string, object>();
+            foreach (var p in node.GetType().GetProperties())
+            {
+                props[p.Name] = p.GetValue(node);
+            }
+            return props;
         }
 
         protected virtual bool AreLeafNodesEqual(object actual, object expected)
@@ -201,7 +219,7 @@ namespace AaronicSubstances.ShrewdEvolver
             }
         }
 
-        protected virtual void ReportMismatch(string message, string pathToActual,
+        protected virtual void ReportError(string message, string pathToActual,
                 Dictionary<string, string> pathExpectations)
         {
             message = WrapAssertionError(message, pathToActual, pathExpectations);
@@ -236,8 +254,13 @@ namespace AaronicSubstances.ShrewdEvolver
         }
 
         private void AssertEquivalentTo(object actual, string pathToActual,
-                Dictionary<string, string> pathExpectations)
+                Dictionary<string, string> pathExpectations, int recursionDepthRemaining)
         {
+            if (recursionDepthRemaining <= 0)
+            {
+                ReportError("Maximum recursion depth reached", pathToActual, pathExpectations);
+                return;
+            }
             string expectation = GetExpectedDescription();
             if (expectation != null && expectation.Length > 0)
             {
@@ -251,7 +274,7 @@ namespace AaronicSubstances.ShrewdEvolver
                 }
                 pathExpectations[pathToActual] = previous + "expected: " + expectation;
             }
-            WorkOnEquivalenceAssertion(_expected, actual, pathToActual, pathExpectations);
+            WorkOnEquivalenceAssertion(_expected, actual, pathToActual, pathExpectations, recursionDepthRemaining);
         }
 
         private string GetExpectedDescription()
@@ -263,7 +286,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return SerializeTreeNode(_expected);
         }
 
-        private TreeNodeType GetTreeNodeType(object node)
+        private TreeNodeType? GetTreeNodeType(object node, bool validate)
         {
             if (node == null)
             {
@@ -288,6 +311,10 @@ namespace AaronicSubstances.ShrewdEvolver
             if (node is IDictionary<string, object>)
             {
                 return TreeNodeType.OBJECT;
+            }
+            if (!validate)
+            {
+                return null;
             }
             throw new Exception("Unsupported node type: " + node.GetType());
         }
