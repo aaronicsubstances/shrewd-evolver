@@ -12,14 +12,38 @@ import java.util.Objects;
 
 public class TreeDataMatcher {
 
-    enum TreeNodeType {
+    public enum TreeNodeType {
         OBJECT, ARRAY, NUMBER, BOOLEAN, STRING, NULL
+    }
+
+    public static TreeNodeType getTreeNodeType(Object node, boolean validate) {
+        if (node == null) {
+            return TreeNodeType.NULL;
+        }
+        if (node instanceof Number) {
+            // integer, floating point, decimal
+            return TreeNodeType.NUMBER;
+        }
+        if (node instanceof Boolean) {
+            return TreeNodeType.BOOLEAN;
+        }
+        if (node instanceof String) {
+            return TreeNodeType.STRING;
+        }
+        if (node instanceof List) {
+            return TreeNodeType.ARRAY;
+        }
+        if (node instanceof Map) {
+            return TreeNodeType.OBJECT;
+        }
+        if (!validate) {
+            return null;
+        }
+        throw new RuntimeException("Unsupported node type: " + node.getClass());
     }
     
     private final Object expected;
     private final String expectedDescription;
-    private double realNumberComparisonTolerance = 1e-6;
-    private int maxRecursionDepth = 10;
 
     public TreeDataMatcher(Object expected) {
         this(expected, false);
@@ -34,23 +58,11 @@ public class TreeDataMatcher {
         this.expectedDescription = expectedDescription;
     }
 
-    public double getRealNumberComparisonTolerance() {
-        return realNumberComparisonTolerance;
-    }
-
-    public void setRealNumberComparisonTolerance(double realNumberComparisonTolerance) {
-        this.realNumberComparisonTolerance = realNumberComparisonTolerance;
-    }
-
-    public int getMaxRecursionDepth() {
-        return maxRecursionDepth;
-    }
-
-    public void setMaxRecursionDepth(int maxRecursionDepth) {
-        this.maxRecursionDepth = maxRecursionDepth;
-    }
-
     public void assertEquivalentTo(Object actual) {
+        assertEquivalentTo(actual, 10);
+    }
+
+    public void assertEquivalentTo(Object actual, int maxRecursionDepth) {
         Map<String, String> pathExpectations = new HashMap<>();
         String actualDescription = serializeTreeNode(actual);
         String startPath = "";
@@ -176,8 +188,9 @@ public class TreeDataMatcher {
         //   c. else if big decimal is involved, convert to big decimal and compare.
         //   d. else convert to big integer and compare
         if (isFloatingPoint(actual) || isFloatingPoint(expected)) {
-            double diff = convertToFloatingPoint(actual) - convertToFloatingPoint(expected);
-            return Math.abs(diff) <= realNumberComparisonTolerance;
+            double actualFloat = convertToFloatingPoint(actual);
+            double expectedFloat = convertToFloatingPoint(expected);
+            return areFloatingPointNumbersCloseEnough(actualFloat, expectedFloat);
         }
         else if (actual.getClass().equals(expected.getClass())) {
             return actual.equals(expected);
@@ -221,6 +234,11 @@ public class TreeDataMatcher {
 
     private static long convertToInteger(Object number) {
         return ((Number) number).longValue();
+    }
+
+    protected boolean areFloatingPointNumbersCloseEnough(double actual, double expected) {
+        double diff = Math.abs(actual - expected);
+        return diff <= 1e-6;
     }
 
     protected void reportError(String message, String pathToActual,
@@ -278,31 +296,5 @@ public class TreeDataMatcher {
             return expectedDescription;
         }
         return serializeTreeNode(expected);
-    }
-
-    private TreeNodeType getTreeNodeType(Object node, boolean validate) {
-        if (node == null) {
-            return TreeNodeType.NULL;
-        }
-        if (node instanceof Number) {
-            // integer, floating point, decimal
-            return TreeNodeType.NUMBER;
-        }
-        if (node instanceof Boolean) {
-            return TreeNodeType.BOOLEAN;
-        }
-        if (node instanceof String) {
-            return TreeNodeType.STRING;
-        }
-        if (node instanceof List) {
-            return TreeNodeType.ARRAY;
-        }
-        if (node instanceof Map) {
-            return TreeNodeType.OBJECT;
-        }
-        if (!validate) {
-            return null;
-        }
-        throw new RuntimeException("Unsupported node type: " + node.getClass());
     }
 }
