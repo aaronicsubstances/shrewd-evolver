@@ -2,7 +2,6 @@ package com.aaronicsubstances.shrewd.evolver;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static java.util.Arrays.asList;
 
@@ -14,41 +13,6 @@ import org.testng.annotations.DataProvider;
 import org.testng.annotations.Test;
 
 public class LogMessageTemplateParserTest {
-
-    public static class TokenPart {
-        final PartDescriptor part;
-        final boolean isReplacementField;
-        final int startPos;
-        final int endPos;
-
-        public TokenPart(PartDescriptor part, boolean isReplacementField, int startPos, int endPos) {
-            this.part = part;
-            this.isReplacementField = isReplacementField;
-            this.startPos = startPos;
-            this.endPos = endPos;
-        }
-
-        @Override
-        public boolean equals(Object obj) {
-            if (!(obj instanceof TokenPart)) return false;
-            TokenPart other = (TokenPart) obj;
-            return other.part.equals(part) &&
-                other.isReplacementField == isReplacementField &&
-                other.startPos == startPos &&
-                other.endPos == endPos;
-        }
-
-        @Override
-        public int hashCode() {
-            return Objects.hash(part, isReplacementField, startPos, endPos);
-        }
-
-        @Override
-        public String toString() {
-            return "TokenPart{part=" + part + ", isReplacementField=" + isReplacementField + 
-                ", startPos=" + startPos + ", endPos=" + endPos + "}";
-        }
-    }
 
     @Test(dataProvider = "createTestCalculateLineAndColumnNumbersData")
     public void testCalculateLineAndColumnNumbers(String s, int pos,
@@ -105,17 +69,16 @@ public class LogMessageTemplateParserTest {
     }
 
     @Test(dataProvider = "createTestParseOnePartData")
-    public void testParseOnePart(String source, List<TokenPart> expected) {
+    public void testParseOnePart(String source, List<PartDescriptor> expected) {
         LogMessageTemplateParser tokenizer = new LogMessageTemplateParser(source);
         PartDescriptor part;
-        List<TokenPart> actual = new ArrayList<>();
+        List<PartDescriptor> actual = new ArrayList<>();
         while ((part = tokenizer.parseOnePart()) != null) {
             assertTrue(asList(FormatTokenType.LITERAL_STRING_SECTION, 
                 FormatTokenType.END_REPLACEMENT).contains(tokenizer.tokenType));
-            TokenPart partDescriptor = new TokenPart(part,
-                tokenizer.tokenType == FormatTokenType.END_REPLACEMENT,
-                tokenizer.partStart, tokenizer.endPos);
-            actual.add(partDescriptor);
+            assertEquals(tokenizer.tokenType == FormatTokenType.END_REPLACEMENT,
+                part.literalSection == null);
+            actual.add(part);
         }
         assertEquals(actual, expected);
     }
@@ -125,85 +88,85 @@ public class LogMessageTemplateParserTest {
         return new Object[][]{
             { "", asList() },
             { " ", asList(
-                new TokenPart(new PartDescriptor(" "), false, 0, 1)
+                new PartDescriptor(0, 1, " ")
                 ) },
             { "xyz", asList(
-                new TokenPart(new PartDescriptor("xyz"), false, 0, 3)
+                new PartDescriptor(0, 3, "xyz")
                 ) },
             { "x{{}}{{yz", asList(
-                new TokenPart(new PartDescriptor("x{}{yz"), false, 0, 9)
+                new PartDescriptor(0, 9, "x{}{yz")
                 ) },
             { "x{}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList()), true, 1, 3),
-                new TokenPart(new PartDescriptor("{yz"), false, 3, 7)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 3, asList()),
+                new PartDescriptor(3, 7, "{yz")
                 ) },
             { "x{0}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(0), true, 1, 4),
-                new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 4, 0),
+                new PartDescriptor(4, 8, "{yz")
                 ) },
             { "x{$0}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(0), true, 1, 5),
-                new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 5, 0),
+                new PartDescriptor(5, 9, "{yz")
                 ) },
             { "x{@0}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(0, true), true, 1, 5),
-                new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 5, 0, true),
+                new PartDescriptor(5, 9, "{yz")
                 ) },
             { "x{a}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("a")), true, 1, 4),
-                new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 4, asList("a")),
+                new PartDescriptor(4, 8, "{yz")
                 ) },
             { "x{$a}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("a"), false), true, 1, 5),
-                new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 5, asList("a"), false),
+                new PartDescriptor(5, 9, "{yz")
                 ) },
             { "x{.0}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("0")), true, 1, 5),
-                new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 5, asList("0")),
+                new PartDescriptor(5, 9, "{yz")
                 ) },
             { "x{$.0}{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("0"), false), true, 1, 6),
-                new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 6, asList("0"), false),
+                new PartDescriptor(6, 10, "{yz")
                 ) },
 
             // test previous 4 again, but with whitespace tolerance.
             { "x{ }{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList()), true, 1, 4),
-                new TokenPart(new PartDescriptor("{yz"), false, 4, 8)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 4, asList()),
+                new PartDescriptor(4, 8, "{yz")
                 ) },
             { "x{ 0 }{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(0), true, 1, 6),
-                new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 6, 0),
+                new PartDescriptor(6, 10, "{yz")
                 ) },
             { "x{a  }{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("a")), true, 1, 6),
-                new TokenPart(new PartDescriptor("{yz"), false, 6, 10)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 6, asList("a")),
+                new PartDescriptor(6, 10, "{yz")
                 ) },
             { "x{ . 0 }{{yz", asList(
-                new TokenPart(new PartDescriptor("x"), false, 0, 1),
-                new TokenPart(new PartDescriptor(asList("0")), true, 1, 8),
-                new TokenPart(new PartDescriptor("{yz"), false, 8, 12)
+                new PartDescriptor(0, 1, "x"),
+                new PartDescriptor(1, 8, asList("0")),
+                new PartDescriptor(8, 12, "{yz")
                 ) },
 
             // handle longer replacement fields.
             { "{bag .prices[0 ]}", asList(
-                new TokenPart(new PartDescriptor(asList("bag", "prices", 0)), true, 0, 17)
+                new PartDescriptor(0, 17, asList("bag", "prices", 0))
                 ) },                
             { "{ -12 }{ [10][-2] }{ y.z }", asList(
-                new TokenPart(new PartDescriptor(-12), true, 0, 7),
-                new TokenPart(new PartDescriptor(asList(10, -2)), true, 7, 19),
-                new TokenPart(new PartDescriptor(asList("y", "z")), true, 19, 26)
+                new PartDescriptor(0, 7, -12),
+                new PartDescriptor(7, 19, asList(10, -2)),
+                new PartDescriptor(19, 26, asList("y", "z"))
                 ) }
         };
     }    
@@ -228,7 +191,7 @@ public class LogMessageTemplateParserTest {
             { index++, "{", null },
             { index++, "}", null },
             { index++, "{0", null },
-            { index++, "{a}", asList(new PartDescriptor(asList("a"))) },
+            { index++, "{a}", asList(new PartDescriptor(0, 3, asList("a"))) },
             { index++, "a{.0.[2]}b", null },
             { index++, "a{.}b", null },
             { index++, "a{.a$}b", null },
@@ -239,32 +202,33 @@ public class LogMessageTemplateParserTest {
             { index++, "a{.0]}b", null },
             { index++, "a{[]}b", null },
             { index++, "a{[x]}b", null },
-            { index++, "a{[200]}b", asList(new PartDescriptor("a"),
-                new PartDescriptor(asList(200)), new PartDescriptor("b")) },
+            { index++, "a{[200]}b", asList(new PartDescriptor(0, 1, "a"),
+                new PartDescriptor(1, 8, asList(200)), new PartDescriptor(8, 9, "b")) },
             { index++, "a{ $ [ 200]}b", null },
-            { index++, "a{$ [ 200]}b", asList(new PartDescriptor("a"),
-                new PartDescriptor(asList(200), false), new PartDescriptor("b")) },
-            { index++, " a { x.data [ 200 ] [ 300 ] . q . z } b", asList(new PartDescriptor(" a "), 
-                new PartDescriptor(asList("x", "data", 200, 300, "q", "z")), 
-                new PartDescriptor(" b")) },
+            { index++, "a{$ [ 200]}b", asList(new PartDescriptor(0, 1, "a"),
+                new PartDescriptor(1, 11, asList(200), false), new PartDescriptor(11, 12, "b")) },
+            { index++, " a { x.data [ 200 ] [ 300 ] . q . z } b", asList(new PartDescriptor(0, 3, " a "), 
+                new PartDescriptor(3, 37, asList("x", "data", 200, 300, "q", "z")), 
+                new PartDescriptor(37, 39, " b")) },
             { index++, "", asList() },
-            { index++, "{}", asList(new PartDescriptor(asList())) },
-            { index++, "{$}", asList(new PartDescriptor(asList(), false)) },
-            { index++, ".[]", asList(new PartDescriptor(".[]")) },
-            { index++, ".{{{{x}}}}", asList(new PartDescriptor(".{{x}}")) },
-            { index++, "0", asList(new PartDescriptor("0")) },
-            { index++, "{{0}}", asList(new PartDescriptor("{0}")) },
-            { index++, "{0}", asList(new PartDescriptor(0)) },
-            { index++, "{$0}", asList(new PartDescriptor(0)) },
-            { index++, "{@2}", asList(new PartDescriptor(2, true)) },
-            { index++, "{[0]}", asList(new PartDescriptor(asList(0))) },
-            { index++, "{$[0]}", asList(new PartDescriptor(asList(0), false)) },
+            { index++, "{}", asList(new PartDescriptor(0, 2, asList())) },
+            { index++, "{$}", asList(new PartDescriptor(0, 3, asList(), false)) },
+            { index++, ".[]", asList(new PartDescriptor(0, 3, ".[]")) },
+            { index++, ".{{{{x}}}}", asList(new PartDescriptor(0, 10, ".{{x}}")) },
+            { index++, "0", asList(new PartDescriptor(0, 1, "0")) },
+            { index++, "{{0}}", asList(new PartDescriptor(0, 5, "{0}")) },
+            { index++, "{0}", asList(new PartDescriptor(0, 3, 0)) },
+            { index++, "{$0}", asList(new PartDescriptor(0, 4, 0)) },
+            { index++, "{@2}", asList(new PartDescriptor(0, 4, 2, true)) },
+            { index++, "{[0]}", asList(new PartDescriptor(0, 5, asList(0))) },
+            { index++, "{$[0]}", asList(new PartDescriptor(0, 6, asList(0), false)) },
 
             // test with newlines
-            { index++, "{[\n0]\n}", asList(new PartDescriptor(asList(0))) },
+            { index++, "{[\n0]\n}", asList(new PartDescriptor(0, 7, asList(0))) },
             { index++, "\nThere is plenty{\n}\n of peace\n", 
-                asList(new PartDescriptor("\nThere is plenty"), new PartDescriptor(asList()),
-                    new PartDescriptor("\n of peace\n")) },
+                asList(new PartDescriptor(0, 16, "\nThere is plenty"),
+                    new PartDescriptor(16, 19, asList()),
+                    new PartDescriptor(19, 30, "\n of peace\n")) },
             { index++, "{[0]}\nfirst\nsecond{a}}r{y}", null }
         };
     }

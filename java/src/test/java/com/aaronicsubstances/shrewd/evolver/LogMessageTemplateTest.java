@@ -3,6 +3,8 @@ package com.aaronicsubstances.shrewd.evolver;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import com.aaronicsubstances.shrewd.evolver.LogMessageTemplateParser.PartDescriptor;
+
 import static java.util.Arrays.asList;
 import static com.aaronicsubstances.shrewd.evolver.TestUtils.toMap;
 
@@ -14,7 +16,7 @@ import static org.testng.Assert.*;
 public class LogMessageTemplateTest {
 
     public static class EmbeddableLogRecordImpl extends LogMessageTemplate {
-        
+
         public EmbeddableLogRecordImpl(String formatString, Object treeData, List<Object> positionalArgs) {
             super(formatString, treeData, positionalArgs);
         }
@@ -38,8 +40,15 @@ public class LogMessageTemplateTest {
     
     @Test(dataProvider = "creatTestGetTreeDataSliceData")
     public void testGetTreeDataSlice(Object treeData, List<Object> treeDataKey, Object expected) {
-        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", treeData, null);
-        Object actual = instance.getTreeDataSlice(treeData, treeDataKey);
+        LogMessageTemplate instance = new LogMessageTemplate("", treeData, null) {
+            
+            @Override
+            protected Object handleNonExistentTreeDataSlice(PartDescriptor part, int nonExistentIndex) {
+                return null;
+            }
+        };
+        PartDescriptor part = new PartDescriptor(0, 0, treeDataKey);
+        Object actual = instance.getTreeDataSlice(treeData, part);
         assertEquals(actual, expected);
     }
 
@@ -70,14 +79,22 @@ public class LogMessageTemplateTest {
 
     @Test(dataProvider = "createTestGetPositionalArgData")
     public void testGetPositionalArg(List<Object> args, int index, Object expected) {
-        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", null, args);
-        Object actual = instance.getPositionalArg(args, index);
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", null, args) {
+            
+            @Override
+            protected Object handleNonExistentPositionalArg(PartDescriptor part) {
+                return null;
+            }
+        };
+        PartDescriptor part = new PartDescriptor(0, 0, index);
+        Object actual = instance.getPositionalArg(args, part);
         assertEquals(actual, expected);
     }
 
     @DataProvider
     public Object[][] createTestGetPositionalArgData() {
         return new Object[][]{
+            { null, 0, null },
             { asList(), 0, null },
             { asList(), -1, null },
             { asList(), 1, null },
@@ -155,7 +172,8 @@ public class LogMessageTemplateTest {
             { "{a}{0}", toMap("a", "yes"), asList(1), "\"yes\"1" },
             { "{}{0}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}1" },
             { "{$}{$0}", toMap("a", "yes"), asList("1"), "{a=yes}1" },
-            { "{@}{@0}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}\"1\"" }
+            { "{@}{@0}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}\"1\"" },
+            { "{@}{@0}{8}", toMap("a", "yes"), asList("1"), "{\"a\":\"yes\"}\"1\"{8}" }
         };
     }
 }

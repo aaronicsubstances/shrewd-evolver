@@ -15,29 +15,37 @@ public class LogMessageTemplateParser {
     }
 
     static class PartDescriptor {
+        public int startPos;
+        public int endPos;
         public String literalSection;
         public int positionalArgIndex;
         public List<Object> treeDataKey;
         public boolean serialize;
 
-        public PartDescriptor(String literalSection) {
+        public PartDescriptor(int startPos, int endPos, String literalSection) {
+            this.startPos = startPos;
+            this.endPos = endPos;
             this.literalSection = literalSection;
         }
 
-        public PartDescriptor(int positionalArgIndex) {
-            this(positionalArgIndex, false);
+        public PartDescriptor(int startPos, int endPos, int positionalArgIndex) {
+            this(startPos, endPos, positionalArgIndex, false);
         }
 
-        public PartDescriptor(int positionalArgIndex, boolean serialize) {
+        public PartDescriptor(int startPos, int endPos, int positionalArgIndex, boolean serialize) {
+            this.startPos = startPos;
+            this.endPos = endPos;
             this.positionalArgIndex = positionalArgIndex;
             this.serialize = serialize;
         }
 
-        public PartDescriptor(List<Object> treeDataKey) {
-            this(treeDataKey, true);
+        public PartDescriptor(int startPos, int endPos, List<Object> treeDataKey) {
+            this(startPos, endPos, treeDataKey, true);
         }
 
-        public PartDescriptor(List<Object> treeDataKey, boolean serialize) {
+        public PartDescriptor(int startPos, int endPos, List<Object> treeDataKey, boolean serialize) {
+            this.startPos = startPos;
+            this.endPos = endPos;
             this.treeDataKey = treeDataKey;
             this.serialize = serialize;
         }
@@ -45,6 +53,8 @@ public class LogMessageTemplateParser {
         @Override
         public int hashCode() {
             int hash = 3;
+            hash = 67 * hash + this.startPos;
+            hash = 67 * hash + this.endPos;
             hash = 67 * hash + Objects.hashCode(this.literalSection);
             hash = 67 * hash + this.positionalArgIndex;
             hash = 67 * hash + Objects.hashCode(this.treeDataKey);
@@ -64,10 +74,16 @@ public class LogMessageTemplateParser {
                 return false;
             }
             final PartDescriptor other = (PartDescriptor) obj;
-            if (this.positionalArgIndex != other.positionalArgIndex) {
+            if (this.startPos != other.startPos) {
+                return false;
+            }
+            if (this.endPos != other.endPos) {
                 return false;
             }
             if (!Objects.equals(this.literalSection, other.literalSection)) {
+                return false;
+            }
+            if (this.positionalArgIndex != other.positionalArgIndex) {
                 return false;
             }
             if (!Objects.equals(this.treeDataKey, other.treeDataKey)) {
@@ -81,7 +97,9 @@ public class LogMessageTemplateParser {
 
         @Override
         public String toString() {
-            return "PartDescriptor{" + "literalSection=" + literalSection +
+            return "PartDescriptor{" + "startPos=" + startPos +
+                ", endPos=" + endPos +
+                ", literalSection=" + literalSection +
                 ", positionalArgIndex=" + positionalArgIndex +
                 ", treeDataKey=" + treeDataKey + 
                 ", serialize=" + serialize + '}';
@@ -172,7 +190,7 @@ public class LogMessageTemplateParser {
         }
         switch (tokenType) {
             case LITERAL_STRING_SECTION:
-                return new PartDescriptor(token);
+                return new PartDescriptor(partStart, endPos, token);
             case BEGIN_REPLACEMENT:
             case STRINGIFY:
             case SERIALIZE:
@@ -318,7 +336,7 @@ public class LogMessageTemplateParser {
                 Integer notTreeDataKeyButIndex = parsePositionalIndex(token);
                 if (notTreeDataKeyButIndex != null) {
                     // stringify positional arguments by default.
-                    return new PartDescriptor(notTreeDataKeyButIndex, 
+                    return new PartDescriptor(partStart, endPos, notTreeDataKeyButIndex, 
                         startTokenType == FormatTokenType.SERIALIZE);
                 }
             }
@@ -349,7 +367,8 @@ public class LogMessageTemplateParser {
             }
         }
         // serialize keyword arguments by default.
-        return new PartDescriptor(treeDataKey, startTokenType != FormatTokenType.STRINGIFY);
+        return new PartDescriptor(partStart, endPos, treeDataKey,
+            startTokenType != FormatTokenType.STRINGIFY);
     }
 
     private Integer parsePositionalIndex(String token) {

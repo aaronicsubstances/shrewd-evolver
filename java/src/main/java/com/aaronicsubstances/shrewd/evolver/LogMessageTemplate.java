@@ -40,6 +40,7 @@ public class LogMessageTemplate {
         }
     }
 
+    private final String rawFormatString;
     private final Object keywordArgs;
     private final List<Object> positionalArgs;
 
@@ -50,9 +51,20 @@ public class LogMessageTemplate {
 
     public LogMessageTemplate(String formatString, Object keywordArgs,
             List<Object> positionalArgs) {
+        this(formatString, new LogMessageTemplateParser(formatString).parse(),
+            keywordArgs, positionalArgs);
+    }
+
+    public LogMessageTemplate(String rawFormatString, List<PartDescriptor> parsedFormatString,
+            Object keywordArgs, List<Object> positionalArgs) {
+        this.rawFormatString = rawFormatString;
+        this.parsedFormatString = parsedFormatString;
         this.keywordArgs = keywordArgs;
         this.positionalArgs = positionalArgs;
-        this.parsedFormatString = parseFormatString(formatString);
+    }
+
+    public List<PartDescriptor> getParsedFormatString() {
+        return parsedFormatString;
     }
 
     @Override
@@ -100,10 +112,14 @@ public class LogMessageTemplate {
         return "%s";
     }
 
-    protected Object getPositionalArg(List<Object> args, int index) {
+    protected Object getPositionalArg(List<Object> args, PartDescriptor part) {
+        if (args == null) {
+            return handleNonExistentPositionalArg(part);
+        }
         // Support Python style indexing.
+        int index = part.positionalArgIndex;
         if (Math.abs(index) >= args.size()) {
-            return handleNonExistentPositionalArg(index);
+            return handleNonExistentPositionalArg(part);
         }
         if (index < 0) {
             index += args.size();
@@ -112,12 +128,13 @@ public class LogMessageTemplate {
     }
 
     @SuppressWarnings("unchecked")
-    protected Object getTreeDataSlice(Object treeData, List<Object> treeDataKey) {
+    protected Object getTreeDataSlice(Object treeData, PartDescriptor part) {
         Object treeDataSlice = treeData;
-        for (Object keyPart : treeDataKey) {
+        for (int i = 0; i < part.treeDataKey.size(); i++) {
             if (treeDataSlice == null) {
-                break;
+                return handleNonExistentTreeDataSlice(part, i);
             }
+            Object keyPart = part.treeDataKey.get(i);
             if (keyPart instanceof Integer) {
                 int index = (Integer) keyPart;
                 if (!(treeDataSlice instanceof List)) {
@@ -127,7 +144,7 @@ public class LogMessageTemplate {
                 List<Object> jsonArray = (List<Object>) treeDataSlice;
                 // Support Python style indexing.
                 if (Math.abs(index) >= jsonArray.size()) {
-                    return handleNonExistentTreeDataSlice(treeDataKey);
+                    return handleNonExistentTreeDataSlice(part, i);
                 }
                 if (index < 0) {
                     index += jsonArray.size();
@@ -141,7 +158,7 @@ public class LogMessageTemplate {
                 }
                 Map<Object, Object> jsonObject = (Map<Object, Object>) treeDataSlice;
                 if (!jsonObject.containsKey(keyPart)) {
-                    return handleNonExistentTreeDataSlice(treeDataKey);
+                    return handleNonExistentTreeDataSlice(part, i);
                 }
                 treeDataSlice = jsonObject.get(keyPart);
             }
@@ -149,12 +166,12 @@ public class LogMessageTemplate {
         return treeDataSlice;
     }
 
-    protected Object handleNonExistentTreeDataSlice(List<Object> treeDataKey) {
-        return null;
+    protected Object handleNonExistentTreeDataSlice(PartDescriptor part, int nonExistentIndex) {
+        return rawFormatString.substring(part.startPos, part.endPos);
     }
 
-    protected Object handleNonExistentPositionalArg(int index) {
-        return null;
+    protected Object handleNonExistentPositionalArg(PartDescriptor part) {
+        return rawFormatString.substring(part.startPos, part.endPos);
     }
 
     protected Object getTreeDataListItem(Object treeData, int index) {
@@ -173,39 +190,27 @@ public class LogMessageTemplate {
         }
     }
 
-    static List<PartDescriptor> parseFormatString(String formatString) {
-        return new LogMessageTemplateParser(formatString).parse();
-    }
-
-    List<PartDescriptor> getParsedFormatString() {
-        return parsedFormatString;
-    }
-
     private String generateFormatString(List<Object> formatArgsReceiver, boolean forLogger) {
         StringBuilder logFormat = new StringBuilder();
         int uniqueIndex = 0;
         for (PartDescriptor part : parsedFormatString) {
-            if (part.treeDataKey != null) {
-                logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
-                Object treeDataSlice = getTreeDataSlice(keywordArgs, part.treeDataKey);
-                if (part.serialize) {
-                    formatArgsReceiver.add(toStructuredLogRecord(treeDataSlice));
-                }
-                else {
-                    formatArgsReceiver.add(treeDataSlice);
-                }
-            }
-            else if (part.literalSection != null) {
+            if (part.literalSection != null) {
                 logFormat.append(escapeLiteral(part.literalSection, forLogger));
             }
             else {
                 logFormat.append(generatePositionIndicator(uniqueIndex++, forLogger));
-                Object item = getPositionalArg(positionalArgs, part.positionalArgIndex);
-                if (part.serialize) {
-                    formatArgsReceiver.add(toStructuredLogRecord(item));
+                Object formatArg;
+                if (part.treeDataKey != null) {
+                    formatArg = getTreeDataSlice(keywordArgs, part);
                 }
                 else {
-                    formatArgsReceiver.add(item);
+                    formatArg = getPositionalArg(positionalArgs, part);
+                }
+                if (part.serialize) {
+                    formatArgsReceiver.add(toStructuredLogRecord(formatArg));
+                }
+                else {
+                    formatArgsReceiver.add(formatArg);
                 }
             }
         }
