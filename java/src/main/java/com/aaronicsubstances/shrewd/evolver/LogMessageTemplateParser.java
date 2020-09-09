@@ -362,7 +362,8 @@ public class LogMessageTemplateParser {
             positionalIndex = Integer.parseInt(token);
         }
         catch (NumberFormatException ex) {
-            if (!"0123456789".contains("" + token.charAt(0))) {
+			// treat token as keyword if it doesn't start like an integer does.
+            if (!"+-0123456789".contains("" + token.charAt(0))) {
                 return null;
             }
             throw createParseError("invalid positional index");
