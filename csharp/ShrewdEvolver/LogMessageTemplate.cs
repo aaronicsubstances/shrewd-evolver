@@ -33,6 +33,7 @@ namespace AaronicSubstances.ShrewdEvolver
             }
         }
 
+        private readonly string _rawFormatString;
         private readonly object _keywordArgs;
         private readonly IList<object> _positionalArgs;
 
@@ -42,11 +43,26 @@ namespace AaronicSubstances.ShrewdEvolver
         private readonly IList<PartDescriptor> _parsedFormatString;
 
         public LogMessageTemplate(string formatString, object keywordArgs,
-                IList<object> positionalArgs)
+                IList<object> positionalArgs):
+            this(formatString, new LogMessageTemplateParser(formatString).Parse(),
+                keywordArgs, positionalArgs)
+        { }
+
+        public LogMessageTemplate(string rawFormatString, IList<PartDescriptor> parsedFormatString,
+            object keywordArgs, IList<object> positionalArgs)
         {
+            _rawFormatString = rawFormatString;
+            _parsedFormatString = parsedFormatString;
             _keywordArgs = keywordArgs;
             _positionalArgs = positionalArgs;
-            _parsedFormatString = ParseFormatString(formatString);
+        }
+
+        public IList<PartDescriptor> ParsedFormatString
+        {
+            get
+            {
+                return _parsedFormatString;
+            }
         }
 
         public override string ToString()
@@ -89,12 +105,17 @@ namespace AaronicSubstances.ShrewdEvolver
             return "{" + position + "}";
         }
 
-        protected virtual object GetPositionalArg(IList<object> args, int index)
+        protected internal virtual object GetPositionalArg(IList<object> args, PartDescriptor part)
         {
+            if (args == null)
+            {
+                return HandleNonExistentPositionalArg(part);
+            }
             // Support Python style indexing.
+            int index = part.positionalArgIndex;
             if (Math.Abs(index) >= args.Count)
             {
-                return HandleNonExistentPositionalArg(index);
+                return HandleNonExistentPositionalArg(part);
             }
             if (index < 0)
             {
@@ -103,15 +124,16 @@ namespace AaronicSubstances.ShrewdEvolver
             return args[index];
         }
 
-        protected virtual object GetTreeDataSlice(object treeData, IList<object> treeDataKey)
+        protected internal virtual object GetTreeDataSlice(object treeData, PartDescriptor part)
         {
             object treeDataSlice = treeData;
-            foreach (object keyPart in treeDataKey)
+            for (int i = 0; i < part.treeDataKey.Count; i++)
             {
                 if (treeDataSlice == null)
                 {
-                    break;
+                    return HandleNonExistentTreeDataSlice(part, i);
                 }
+                object keyPart = part.treeDataKey[i];
                 if (keyPart is int) 
                 {
                     var index = (int)keyPart;
@@ -124,7 +146,7 @@ namespace AaronicSubstances.ShrewdEvolver
                     // Support Python style indexing.
                     if (Math.Abs(index) >= jsonArray.Count)
                     {
-                        return HandleNonExistentTreeDataSlice(treeDataKey);
+                        return HandleNonExistentTreeDataSlice(part, i);
                     }
                     if (index < 0)
                     {
@@ -143,7 +165,7 @@ namespace AaronicSubstances.ShrewdEvolver
                     var jsonObject = (IDictionary<string, object>)treeDataSlice;
                     if (!jsonObject.ContainsKey(key))
                     {
-                        return HandleNonExistentTreeDataSlice(treeDataKey);
+                        return HandleNonExistentTreeDataSlice(part, i);
                     }
                     treeDataSlice = jsonObject[key];
                 }
@@ -151,14 +173,14 @@ namespace AaronicSubstances.ShrewdEvolver
             return treeDataSlice;
         }
 
-        protected virtual object HandleNonExistentPositionalArg(int index)
+        protected virtual object HandleNonExistentTreeDataSlice(PartDescriptor part, int nonExistentIndex)
         {
-            return null;
+            return _rawFormatString.Substring(part.startPos, part.endPos - part.startPos);
         }
 
-        protected virtual object HandleNonExistentTreeDataSlice(IList<object> treeDataKey)
+        protected virtual object HandleNonExistentPositionalArg(PartDescriptor part)
         {
-            return null;
+            return _rawFormatString.Substring(part.startPos, part.endPos - part.startPos);
         }
 
         protected virtual object GetTreeDataListItem(object treeData, int index)
@@ -179,50 +201,35 @@ namespace AaronicSubstances.ShrewdEvolver
             }
         }
 
-        internal static IList<PartDescriptor> ParseFormatString(string formatString)
-        {
-            return new LogMessageTemplateParser(formatString).Parse();
-        }
-
-        internal IList<PartDescriptor> GetParsedFormatString()
-        {
-            return _parsedFormatString;
-        }
-
         private string GenerateFormatString(IList<object> formatArgsReceiver, bool forLogger)
         {
             var logFormat = new StringBuilder();
             int uniqueIndex = 0;
             foreach (PartDescriptor part in _parsedFormatString)
             {
-                if (part.treeDataKey != null)
-                {
-                    logFormat.Append(GeneratePositionIndicator(uniqueIndex++, forLogger));
-                    object treeDataSlice = GetTreeDataSlice(_keywordArgs, part.treeDataKey);
-                    if (part.serialize)
-                    {
-                        formatArgsReceiver.Add(ToStructuredLogRecord(treeDataSlice));
-                    }
-                    else
-                    {
-                        formatArgsReceiver.Add(treeDataSlice);
-                    }
-                }
-                else if (part.literalSection != null)
+                if (part.literalSection != null)
                 {
                     logFormat.Append(EscapeLiteral(part.literalSection, forLogger));
                 }
                 else
                 {
                     logFormat.Append(GeneratePositionIndicator(uniqueIndex++, forLogger));
-                    object item = GetPositionalArg(_positionalArgs, part.positionalArgIndex);
-                    if (part.serialize)
+                    object formatArg;
+                    if (part.treeDataKey != null)
                     {
-                        formatArgsReceiver.Add(ToStructuredLogRecord(item));
+                        formatArg = GetTreeDataSlice(_keywordArgs, part);
                     }
                     else
                     {
-                        formatArgsReceiver.Add(item);
+                        formatArg = GetPositionalArg(_positionalArgs, part);
+                    }
+                    if (part.serialize)
+                    {
+                        formatArgsReceiver.Add(ToStructuredLogRecord(formatArg));
+                    }
+                    else
+                    {
+                        formatArgsReceiver.Add(formatArg);
                     }
                 }
             }

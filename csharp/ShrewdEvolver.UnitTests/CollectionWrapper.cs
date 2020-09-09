@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace AaronicSubstances.ShrewdEvolver.UnitTests
 {
@@ -107,7 +108,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 iterationStarted = true;
                 if (item != null)
                 {
-                    if (item.GetType().Name.StartsWith(typeof(KeyValuePair).FullName))
+                    if (item.GetType().FullName.StartsWith(typeof(KeyValuePair).FullName))
                     {
                         dynamic d = item;
                         str.Append(d.Key);
@@ -121,7 +122,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                     }
                 }
             }
-            if (collection.GetType().Name.StartsWith(typeof(IDictionary).FullName))
+            if (Regex.IsMatch(collection.GetType().FullName, "Dictionary|KeyValuePair"))
             {
                 return $"{{{str}}}";
             }

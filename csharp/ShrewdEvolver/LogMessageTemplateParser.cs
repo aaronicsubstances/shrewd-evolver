@@ -16,32 +16,40 @@ namespace AaronicSubstances.ShrewdEvolver
 
         public class PartDescriptor
         {
+            public int startPos;
+            public int endPos;
             public string literalSection;
             public int positionalArgIndex;
             public IList<object> treeDataKey;
             public bool serialize;
 
-            public PartDescriptor(string literalSection)
+            public PartDescriptor(int startPos, int endPos, string literalSection)
             {
+                this.startPos = startPos;
+                this.endPos = endPos;
                 this.literalSection = literalSection;
             }
 
-            public PartDescriptor(int positionalArgIndex):
-                this(positionalArgIndex, false)
+            public PartDescriptor(int startPos, int endPos, int positionalArgIndex):
+                this(startPos, endPos, positionalArgIndex, false)
             { }
 
-            public PartDescriptor(int positionalArgIndex, bool serialize)
+            public PartDescriptor(int startPos, int endPos, int positionalArgIndex, bool serialize)
             {
+                this.startPos = startPos;
+                this.endPos = endPos;
                 this.positionalArgIndex = positionalArgIndex;
                 this.serialize = serialize;
             }
 
-            public PartDescriptor(IList<object> treeDataKey):
-                this(treeDataKey, true)
+            public PartDescriptor(int startPos, int endPos, IList<object> treeDataKey):
+                this(startPos, endPos, treeDataKey, true)
             { }
 
-            public PartDescriptor(IList<object> treeDataKey, bool serializeTreeData)
+            public PartDescriptor(int startPos, int endPos, IList<object> treeDataKey, bool serializeTreeData)
             {
+                this.startPos = startPos;
+                this.endPos = endPos;
                 this.treeDataKey = treeDataKey;
                 this.serialize = serializeTreeData;
             }
@@ -49,6 +57,8 @@ namespace AaronicSubstances.ShrewdEvolver
             public override int GetHashCode()
             {
                 int hash = 3;
+                hash = 67 * hash + this.startPos;
+                hash = 67 * hash + this.endPos;
                 hash = 67 * hash + (literalSection != null ? literalSection.GetHashCode() : 0);
                 hash = 67 * hash + positionalArgIndex;
                 if (this.treeDataKey != null)
@@ -77,11 +87,19 @@ namespace AaronicSubstances.ShrewdEvolver
                     return false;
                 }
                 var other = (PartDescriptor)obj;
-                if (this.positionalArgIndex != other.positionalArgIndex)
+                if (this.startPos != other.startPos)
+                {
+                    return false;
+                }
+                if (this.endPos != other.endPos)
                 {
                     return false;
                 }
                 if (!Equals(this.literalSection, other.literalSection))
+                {
+                    return false;
+                }
+                if (this.positionalArgIndex != other.positionalArgIndex)
                 {
                     return false;
                 }
@@ -123,7 +141,8 @@ namespace AaronicSubstances.ShrewdEvolver
                     treeDataKeyRepr.Append(string.Join(", ", treeDataKey));
                     treeDataKeyRepr.Append("]");
                 }
-                return "PartDescriptor{" + "literalSection=" + literalSection +
+                return "PartDescriptor{" + "startPos=" + startPos +
+                    ", endPos=" + endPos + ", literalSection=" + literalSection +
                     ", positionalArgIndex=" + positionalArgIndex +
                     ", treeDataKey=" + treeDataKeyRepr +
                     ", serialize=" + serialize + '}';
@@ -230,7 +249,7 @@ namespace AaronicSubstances.ShrewdEvolver
             switch (tokenType)
             {
                 case FormatTokenType.LITERAL_STRING_SECTION:
-                    return new PartDescriptor(token);
+                    return new PartDescriptor(partStart, endPos, token);
                 case FormatTokenType.BEGIN_REPLACEMENT:
                 case FormatTokenType.STRINGIFY:
                 case FormatTokenType.SERIALIZE:
@@ -404,7 +423,8 @@ namespace AaronicSubstances.ShrewdEvolver
                     if (notTreeDataKeyButIndex != null)
                     {
                         // stringify positional arguments by default.
-                        return new PartDescriptor(notTreeDataKeyButIndex.Value, startTokenType == FormatTokenType.SERIALIZE);
+                        return new PartDescriptor(partStart, endPos, notTreeDataKeyButIndex.Value,
+                            startTokenType == FormatTokenType.SERIALIZE);
                     }
                 }
                 switch (tokenType)
@@ -438,7 +458,7 @@ namespace AaronicSubstances.ShrewdEvolver
                 }
             }
             // serialize keyword arguments by default.
-            return new PartDescriptor(treeDataKey, startTokenType != FormatTokenType.STRINGIFY);
+            return new PartDescriptor(partStart, endPos, treeDataKey, startTokenType != FormatTokenType.STRINGIFY);
         }
 
         private int? ParsePositionalIndex(string token)
