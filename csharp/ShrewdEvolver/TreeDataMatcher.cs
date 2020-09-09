@@ -11,9 +11,42 @@ namespace AaronicSubstances.ShrewdEvolver
 {
     public class TreeDataMatcher
     {
-        internal enum TreeNodeType
+        public enum TreeNodeType
         {
             OBJECT, ARRAY, NUMBER, BOOLEAN, STRING, NULL
+        }
+
+        public static TreeNodeType? GetTreeNodeType(object node, bool validate)
+        {
+            if (node == null)
+            {
+                return TreeNodeType.NULL;
+            }
+            if (IsNumber(node))
+            {
+                return TreeNodeType.NUMBER;
+            }
+            if (node is bool)
+            {
+                return TreeNodeType.BOOLEAN;
+            }
+            if (node is string)
+            {
+                return TreeNodeType.STRING;
+            }
+            if (node is IList<object>)
+            {
+                return TreeNodeType.ARRAY;
+            }
+            if (node is IDictionary<string, object>)
+            {
+                return TreeNodeType.OBJECT;
+            }
+            if (!validate)
+            {
+                return null;
+            }
+            throw new Exception("Unsupported node type: " + node.GetType());
         }
 
         private readonly object _expected;
@@ -33,17 +66,18 @@ namespace AaronicSubstances.ShrewdEvolver
             _expectedDescription = expectedDescription;
         }
 
-        public double RealNumberComparisonTolerance { get; set; } = 1e-6;
-
-        public int MaxRecursionDepth { get; set; } = 10;
-
         public void AssertEquivalentTo(object actual)
+        {
+            AssertEquivalentTo(actual, 10);
+        }
+
+        public void AssertEquivalentTo(object actual, int maxRecursionDepth)
         {
             var pathExpectations = new Dictionary<string, string>();
             string actualDescription = SerializeTreeNode(actual);
             string startPath = "";
             pathExpectations[startPath] = "actual: " + actualDescription;
-            AssertEquivalentTo(actual, startPath, pathExpectations, MaxRecursionDepth);
+            AssertEquivalentTo(actual, startPath, pathExpectations, maxRecursionDepth);
         }
 
         protected virtual string SerializeTreeNode(object node)
@@ -154,7 +188,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return props;
         }
 
-        protected virtual bool AreLeafNodesEqual(object actual, object expected)
+        private bool AreLeafNodesEqual(object actual, object expected)
         {
             if (actual == null || expected == null)
             {
@@ -174,8 +208,9 @@ namespace AaronicSubstances.ShrewdEvolver
             //   d. else convert to big integer and compare
             if (IsFloatingPoint(actual) || IsFloatingPoint(expected))
             {
-                double diff = ConvertToFloatingPoint(actual) - ConvertToFloatingPoint(expected);
-                return Math.Abs(diff) <= RealNumberComparisonTolerance;
+                double actualFloat = ConvertToFloatingPoint(actual);
+                double expectedFloat = ConvertToFloatingPoint(expected);
+                return AreFloatingPointNumbersCloseEnough(actualFloat, expectedFloat);
             }
             else if (actual.GetType() == expected.GetType())
             {
@@ -217,6 +252,12 @@ namespace AaronicSubstances.ShrewdEvolver
                 }
                 return integers[0] == integers[1];
             }
+        }
+
+        protected bool AreFloatingPointNumbersCloseEnough(double actual, double expected)
+        {
+            double diff = Math.Abs(actual - expected);
+            return diff <= 1e-6;
         }
 
         protected virtual void ReportError(string message, string pathToActual,
@@ -284,39 +325,6 @@ namespace AaronicSubstances.ShrewdEvolver
                 return _expectedDescription;
             }
             return SerializeTreeNode(_expected);
-        }
-
-        private TreeNodeType? GetTreeNodeType(object node, bool validate)
-        {
-            if (node == null)
-            {
-                return TreeNodeType.NULL;
-            }
-            if (IsNumber(node))
-            {
-                return TreeNodeType.NUMBER;
-            }
-            if (node is bool)
-            {
-                return TreeNodeType.BOOLEAN;
-            }
-            if (node is string)
-            {
-                return TreeNodeType.STRING;
-            }
-            if (node is IList<object>)
-            {
-                return TreeNodeType.ARRAY;
-            }
-            if (node is IDictionary<string, object>)
-            {
-                return TreeNodeType.OBJECT;
-            }
-            if (!validate)
-            {
-                return null;
-            }
-            throw new Exception("Unsupported node type: " + node.GetType());
         }
 
         internal static bool IsNumber(object value)

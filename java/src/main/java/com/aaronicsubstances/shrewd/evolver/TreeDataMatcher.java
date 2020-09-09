@@ -172,7 +172,7 @@ public class TreeDataMatcher {
         }
     }
 
-    protected boolean areLeafNodesEqual(Object actual, Object expected) {
+    private boolean areLeafNodesEqual(Object actual, Object expected) {
         if (actual == null || expected == null) {
             return actual == expected;
         }
@@ -222,18 +222,6 @@ public class TreeDataMatcher {
             }
             return integers.get(0).equals(integers.get(1));
         }
-    }
-
-    private static boolean isFloatingPoint(Object number) {
-        return number instanceof Double || number instanceof Float;
-    }
-
-    private static double convertToFloatingPoint(Object number) {
-        return ((Number) number).doubleValue();
-    }
-
-    private static long convertToInteger(Object number) {
-        return ((Number) number).longValue();
     }
 
     protected boolean areFloatingPointNumbersCloseEnough(double actual, double expected) {
@@ -296,5 +284,17 @@ public class TreeDataMatcher {
             return expectedDescription;
         }
         return serializeTreeNode(expected);
+    }
+
+    private static boolean isFloatingPoint(Object number) {
+        return number instanceof Double || number instanceof Float;
+    }
+
+    private static double convertToFloatingPoint(Object number) {
+        return ((Number) number).doubleValue();
+    }
+
+    private static long convertToInteger(Object number) {
+        return ((Number) number).longValue();
     }
 }
