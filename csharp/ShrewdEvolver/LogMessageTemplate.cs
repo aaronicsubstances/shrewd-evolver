@@ -33,18 +33,18 @@ namespace AaronicSubstances.ShrewdEvolver
             }
         }
 
+        private readonly object _keywordArgs;
         private readonly IList<object> _positionalArgs;
-        private readonly object _treeData;
 
         // Contents are literal string, index into positional arg, or
         // treeDataKey, which is list of objects as path into treeData.
         // Each part of treeDataKey in turn consists of JSON property name, or index into JSON array.
         private readonly IList<PartDescriptor> _parsedFormatString;
 
-        public LogMessageTemplate(string formatString, object treeData,
+        public LogMessageTemplate(string formatString, object keywordArgs,
                 IList<object> positionalArgs)
         {
-            _treeData = treeData;
+            _keywordArgs = keywordArgs;
             _positionalArgs = positionalArgs;
             _parsedFormatString = ParseFormatString(formatString);
         }
@@ -59,10 +59,10 @@ namespace AaronicSubstances.ShrewdEvolver
 
         public object ToStructuredLogRecord()
         {
-            return ToStructuredLogRecord(_treeData);
+            return ToStructuredLogRecord(_keywordArgs);
         }
 
-        public object ToUnstructuredLogRecord()
+        public Unstructured ToUnstructuredLogRecord()
         {
             var formatArgs = new List<object>();
             string formatString = GenerateFormatString(formatArgs, true);
@@ -74,7 +74,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return new Structured(this, treeDataSlice);
         }
 
-        protected string SerializeData(object treeDataSlice)
+        protected virtual string SerializeData(object treeDataSlice)
         {
             throw new NotImplementedException();
         }
@@ -198,8 +198,8 @@ namespace AaronicSubstances.ShrewdEvolver
                 if (part.treeDataKey != null)
                 {
                     logFormat.Append(GeneratePositionIndicator(uniqueIndex++, forLogger));
-                    object treeDataSlice = GetTreeDataSlice(_treeData, part.treeDataKey);
-                    if (part.serializeTreeData)
+                    object treeDataSlice = GetTreeDataSlice(_keywordArgs, part.treeDataKey);
+                    if (part.serialize)
                     {
                         formatArgsReceiver.Add(ToStructuredLogRecord(treeDataSlice));
                     }
@@ -216,7 +216,14 @@ namespace AaronicSubstances.ShrewdEvolver
                 {
                     logFormat.Append(GeneratePositionIndicator(uniqueIndex++, forLogger));
                     object item = GetPositionalArg(_positionalArgs, part.positionalArgIndex);
-                    formatArgsReceiver.Add(item);
+                    if (part.serialize)
+                    {
+                        formatArgsReceiver.Add(ToStructuredLogRecord(item));
+                    }
+                    else
+                    {
+                        formatArgsReceiver.Add(item);
+                    }
                 }
             }
             return logFormat.ToString();

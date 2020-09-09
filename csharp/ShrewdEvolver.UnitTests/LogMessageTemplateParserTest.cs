@@ -168,6 +168,11 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                     new TokenPart(new PartDescriptor(0), true, 1, 5),
                     new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
                     ) },
+                new object[]{ "x{@0}{{yz", ToGenericList(
+                    new TokenPart(new PartDescriptor("x"), false, 0, 1),
+                    new TokenPart(new PartDescriptor(0, true), true, 1, 5),
+                    new TokenPart(new PartDescriptor("{yz"), false, 5, 9)
+                    ) },
                 new object[]{ "x{a}{{yz", ToGenericList(
                     new TokenPart(new PartDescriptor("x"), false, 0, 1),
                     new TokenPart(new PartDescriptor(ToList("a")), true, 1, 4),
@@ -277,6 +282,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
                 new object[]{ index++, "{{0}}", ToList(new PartDescriptor("{0}")) },
                 new object[]{ index++, "{0}", ToList(new PartDescriptor(0)) },
                 new object[]{ index++, "{$0}", ToList(new PartDescriptor(0)) },
+                new object[]{ index++, "{@2}", ToList(new PartDescriptor(2, true)) },
                 new object[]{ index++, "{[0]}", ToList(new PartDescriptor(ToList(0))) },
                 new object[]{ index++, "{$[0]}", ToList(new PartDescriptor(ToList(0), false)) },
 

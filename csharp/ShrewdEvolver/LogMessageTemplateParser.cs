@@ -10,7 +10,7 @@ namespace AaronicSubstances.ShrewdEvolver
         internal enum FormatTokenType
         {
             LITERAL_STRING_SECTION, BEGIN_REPLACEMENT, END_REPLACEMENT, DOT,
-            OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, DESTRUCTURE,
+            OPENING_SQUARE, CLOSING_SQUARE, STRINGIFY, SERIALIZE,
             AT, DOLLAR, COMMA, COLON
         }
 
@@ -19,16 +19,21 @@ namespace AaronicSubstances.ShrewdEvolver
             public string literalSection;
             public int positionalArgIndex;
             public IList<object> treeDataKey;
-            public bool serializeTreeData;
+            public bool serialize;
 
             public PartDescriptor(string literalSection)
             {
                 this.literalSection = literalSection;
             }
 
-            public PartDescriptor(int positionalArgIndex)
+            public PartDescriptor(int positionalArgIndex):
+                this(positionalArgIndex, false)
+            { }
+
+            public PartDescriptor(int positionalArgIndex, bool serialize)
             {
                 this.positionalArgIndex = positionalArgIndex;
+                this.serialize = serialize;
             }
 
             public PartDescriptor(IList<object> treeDataKey):
@@ -38,7 +43,7 @@ namespace AaronicSubstances.ShrewdEvolver
             public PartDescriptor(IList<object> treeDataKey, bool serializeTreeData)
             {
                 this.treeDataKey = treeDataKey;
-                this.serializeTreeData = serializeTreeData;
+                this.serialize = serializeTreeData;
             }
 
             public override int GetHashCode()
@@ -53,7 +58,7 @@ namespace AaronicSubstances.ShrewdEvolver
                         hash = 67 * hash + treeDataKeyItem.GetHashCode();
                     }
                 }
-                hash = 67 * hash + (serializeTreeData ? 1 : 0);
+                hash = 67 * hash + (serialize ? 1 : 0);
                 return hash;
             }
 
@@ -102,7 +107,7 @@ namespace AaronicSubstances.ShrewdEvolver
                         }
                     }
                 }
-                if (this.serializeTreeData != other.serializeTreeData)
+                if (this.serialize != other.serialize)
                 {
                     return false;
                 }
@@ -121,7 +126,7 @@ namespace AaronicSubstances.ShrewdEvolver
                 return "PartDescriptor{" + "literalSection=" + literalSection +
                     ", positionalArgIndex=" + positionalArgIndex +
                     ", treeDataKey=" + treeDataKeyRepr +
-                    ", serializeTreeData=" + serializeTreeData + '}';
+                    ", serialize=" + serialize + '}';
             }
         }
 
@@ -228,9 +233,9 @@ namespace AaronicSubstances.ShrewdEvolver
                     return new PartDescriptor(token);
                 case FormatTokenType.BEGIN_REPLACEMENT:
                 case FormatTokenType.STRINGIFY:
-                case FormatTokenType.DESTRUCTURE:
+                case FormatTokenType.SERIALIZE:
                     _inReplacementField = true;
-                    PartDescriptor part = ParseReplacementField(tokenType != FormatTokenType.STRINGIFY);
+                    PartDescriptor part = ParseReplacementField(tokenType);
                     _inReplacementField = false;
                     return part;
                 case FormatTokenType.END_REPLACEMENT:
@@ -351,7 +356,7 @@ namespace AaronicSubstances.ShrewdEvolver
                                 switch (source[endPos])
                                 {
                                     case '@':
-                                        tokenType = FormatTokenType.DESTRUCTURE;
+                                        tokenType = FormatTokenType.SERIALIZE;
                                         endPos++;
                                         break;
                                     case '$':
@@ -379,7 +384,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return token.ToString();
         }
 
-        private PartDescriptor ParseReplacementField(bool serializeTreeData)
+        private PartDescriptor ParseReplacementField(FormatTokenType startTokenType)
         {
             var treeDataKey = new List<object>();
             while (true)
@@ -398,7 +403,8 @@ namespace AaronicSubstances.ShrewdEvolver
                     int? notTreeDataKeyButIndex = ParsePositionalIndex(token);
                     if (notTreeDataKeyButIndex != null)
                     {
-                        return new PartDescriptor(notTreeDataKeyButIndex.Value);
+                        // stringify positional arguments by default.
+                        return new PartDescriptor(notTreeDataKeyButIndex.Value, startTokenType == FormatTokenType.SERIALIZE);
                     }
                 }
                 switch (tokenType)
@@ -427,13 +433,12 @@ namespace AaronicSubstances.ShrewdEvolver
                         break;
                     case FormatTokenType.CLOSING_SQUARE:
                         throw CreateParseError("Single ']' encountered in replacement field");
-                    case FormatTokenType.BEGIN_REPLACEMENT:
-                        throw CreateParseError("invalid '{' in replacement field");
                     default:
-                        throw CreateParseError("Unexpected token: " + token);
+                        throw CreateParseError("invalid '" + token + "' in replacement field");
                 }
             }
-            return new PartDescriptor(treeDataKey, serializeTreeData);
+            // serialize keyword arguments by default.
+            return new PartDescriptor(treeDataKey, startTokenType != FormatTokenType.STRINGIFY);
         }
 
         private int? ParsePositionalIndex(string token)
@@ -446,7 +451,8 @@ namespace AaronicSubstances.ShrewdEvolver
             bool positionalIndexValid = int.TryParse(token, out int positionalIndex);
             if (!positionalIndexValid)
             {
-                if (!"0123456789".Contains(token[0]))
+                // treat token as keyword if it doesn't start like an integer does.
+                if (!"+-0123456789".Contains(token[0]))
                 {
                     return null;
                 }
