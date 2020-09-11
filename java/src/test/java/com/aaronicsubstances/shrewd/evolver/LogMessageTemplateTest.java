@@ -49,7 +49,7 @@ public class LogMessageTemplateTest {
     
     @Test(dataProvider = "creatTestGetTreeDataSliceData")
     public void testGetTreeDataSlice(Object treeData, List<Object> treeDataKey, Object expected) {
-        LogMessageTemplate instance = new LogMessageTemplate("", treeData, null) {
+        LogMessageTemplate instance = new EmbeddableLogRecordImpl("", treeData, null) {
             
             @Override
             protected Object handleNonExistentTreeDataSlice(PartDescriptor part, int nonExistentIndex) {
