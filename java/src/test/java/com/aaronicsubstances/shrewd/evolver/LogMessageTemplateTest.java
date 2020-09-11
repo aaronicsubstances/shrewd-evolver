@@ -5,6 +5,8 @@ import java.util.stream.Collectors;
 
 import com.aaronicsubstances.shrewd.evolver.LogMessageTemplateParser.PartDescriptor;
 
+import com.google.gson.Gson;
+
 import static java.util.Arrays.asList;
 import static com.aaronicsubstances.shrewd.evolver.TestUtils.toMap;
 
@@ -20,10 +22,16 @@ public class LogMessageTemplateTest {
         public EmbeddableLogRecordImpl(String formatString, Object treeData, List<Object> positionalArgs) {
             super(formatString, treeData, positionalArgs);
         }
+		
+		@Override
+		protected String serializeData(Object treeDataSlice) {
+			return new Gson().toJson(treeDataSlice);
+		}
 
         @Override
         protected String escapeLiteral(String literal, boolean forLogger) {
             if (forLogger) {
+				// Assume SLF4J
                 return literal.replace("{", "\\{");
             }
             return super.escapeLiteral(literal, forLogger);
@@ -32,6 +40,7 @@ public class LogMessageTemplateTest {
         @Override
         protected String generatePositionIndicator(int position, boolean forLogger) {
             if (forLogger) {
+				// Assume SLF4J
                 return "{}";
             }
             return super.generatePositionIndicator(position, forLogger);

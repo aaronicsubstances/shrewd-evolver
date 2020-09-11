@@ -7,7 +7,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
-public class LogMessageTemplate {
+public abstract class LogMessageTemplate {
     
     public static class Unstructured {
         private final String formatString;
@@ -85,11 +85,11 @@ public class LogMessageTemplate {
         return new Unstructured(formatString, formatArgs);
     }
 
-    protected Object toStructuredLogRecord(Object treeDataSlice) {
+    private Object toStructuredLogRecord(Object treeDataSlice) {
         return new Structured(treeDataSlice);
     }
 
-    protected String serializeData(Object treeDataSlice) {
+    protected abstract String serializeData(Object treeDataSlice);/* {
         try {
             Class<?> gsonCls = Class.forName("com.google.gson.Gson");
             Object gsonInstance = gsonCls.newInstance();
@@ -102,7 +102,7 @@ public class LogMessageTemplate {
             }
             throw new RuntimeException(ex);
         }
-    }
+    }*/
 
     protected String escapeLiteral(String literal, boolean forLogger) {
         return literal.replace("%", "%%");
@@ -112,7 +112,7 @@ public class LogMessageTemplate {
         return "%s";
     }
 
-    protected Object getPositionalArg(List<Object> args, PartDescriptor part) {
+    Object getPositionalArg(List<Object> args, PartDescriptor part) {
         if (args == null) {
             return handleNonExistentPositionalArg(part);
         }
@@ -128,7 +128,7 @@ public class LogMessageTemplate {
     }
 
     @SuppressWarnings("unchecked")
-    protected Object getTreeDataSlice(Object treeData, PartDescriptor part) {
+    Object getTreeDataSlice(Object treeData, PartDescriptor part) {
         Object treeDataSlice = treeData;
         for (int i = 0; i < part.treeDataKey.size(); i++) {
             if (treeDataSlice == null) {

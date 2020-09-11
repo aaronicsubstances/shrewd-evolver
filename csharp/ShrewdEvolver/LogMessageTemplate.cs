@@ -5,7 +5,7 @@ using static AaronicSubstances.ShrewdEvolver.LogMessageTemplateParser;
 
 namespace AaronicSubstances.ShrewdEvolver
 {
-    public class LogMessageTemplate
+    public abstract class LogMessageTemplate
     {
         public class Unstructured
         {
@@ -73,7 +73,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return msg;
         }
 
-        public object ToStructuredLogRecord()
+        public virtual object ToStructuredLogRecord()
         {
             return ToStructuredLogRecord(_keywordArgs);
         }
@@ -85,15 +85,12 @@ namespace AaronicSubstances.ShrewdEvolver
             return new Unstructured(formatString, formatArgs);
         }
 
-        protected virtual object ToStructuredLogRecord(object treeDataSlice)
+        private object ToStructuredLogRecord(object treeDataSlice)
         {
             return new Structured(this, treeDataSlice);
         }
 
-        protected virtual string SerializeData(object treeDataSlice)
-        {
-            throw new NotImplementedException();
-        }
+        protected abstract string SerializeData(object treeDataSlice);
 
         protected virtual string EscapeLiteral(string literal, bool forLogger)
         {
@@ -105,7 +102,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return "{" + position + "}";
         }
 
-        protected internal virtual object GetPositionalArg(IList<object> args, PartDescriptor part)
+        internal object GetPositionalArg(IList<object> args, PartDescriptor part)
         {
             if (args == null)
             {
@@ -124,7 +121,7 @@ namespace AaronicSubstances.ShrewdEvolver
             return args[index];
         }
 
-        protected internal virtual object GetTreeDataSlice(object treeData, PartDescriptor part)
+        internal object GetTreeDataSlice(object treeData, PartDescriptor part)
         {
             object treeDataSlice = treeData;
             for (int i = 0; i < part.treeDataKey.Count; i++)
@@ -156,12 +153,12 @@ namespace AaronicSubstances.ShrewdEvolver
                 }
                 else
                 {
-                    var key = (string)keyPart;
-                    if (!(treeDataSlice is IDictionary<string, object>))
+                    if (!(keyPart is string) || !(treeDataSlice is IDictionary<string, object>))
                     {
                         treeDataSlice = GetTreeDataPropertyValue(treeDataSlice, keyPart);
                         continue;
                     }
+                    var key = (string)keyPart;
                     var jsonObject = (IDictionary<string, object>)treeDataSlice;
                     if (!jsonObject.ContainsKey(key))
                     {

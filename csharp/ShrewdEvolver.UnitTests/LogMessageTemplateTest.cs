@@ -22,9 +22,19 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             {
                 return JsonConvert.SerializeObject(treeDataSlice);
             }
+
+            protected override string GeneratePositionIndicator(int position, bool forLogger)
+            {
+                if (forLogger)
+                {
+                    // Assume Serilog
+                    return "{$" + position + "}";
+                }
+                return base.GeneratePositionIndicator(position, forLogger);
+            }
         }
 
-        public class TestLogRecordImp2 : LogMessageTemplate
+        public class TestLogRecordImp2 : EmbeddableLogRecordImpl
         {
 
             public TestLogRecordImp2(string formatString, object treeData, List<object> positionalArgs) :
@@ -129,10 +139,10 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
             return new List<object[]>
             {
                 new object[]{ "", ToDict(), ToList(), "", ToGenericList<string>() },
-                new object[]{ "{a}{0}", ToDict("a", "yes"), ToList(1), "{0}{1}", ToGenericList("\"yes\"", "1") },
-                new object[]{ "{}{0}", ToDict("a", "yes"), ToList("1"), "{0}{1}", ToGenericList("{\"a\":\"yes\"}", "1") },
-                new object[]{ "{$}{$0}", new CollectionWrapper(ToDict("a", "yes")), ToList("1"), "{0}{1}", ToGenericList("{a=yes}", "1") },
-                new object[]{ "{@}{@0}", ToDict("a", "yes"), ToList("1"), "{0}{1}", ToGenericList("{\"a\":\"yes\"}", "\"1\"") }
+                new object[]{ "{a}{0}", ToDict("a", "yes"), ToList(1), "{$0}{$1}", ToGenericList("\"yes\"", "1") },
+                new object[]{ "{}{0}", ToDict("a", "yes"), ToList("1"), "{$0}{$1}", ToGenericList("{\"a\":\"yes\"}", "1") },
+                new object[]{ "{$}{$0}", new CollectionWrapper(ToDict("a", "yes")), ToList("1"), "{$0}{$1}", ToGenericList("{a=yes}", "1") },
+                new object[]{ "{@}{@0}", ToDict("a", "yes"), ToList("1"), "{$0}{$1}", ToGenericList("{\"a\":\"yes\"}", "\"1\"") }
             };
         }
 
