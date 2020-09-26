@@ -10,12 +10,18 @@ namespace PortableIPC.Abstractions
         EndpointConfig EndpointConfig { get; }
 
         // handle null return as client mode handler
-        ISessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId);
+        AbstractSessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId);
 
         void RemoveSessionHandler(IPEndPoint endpoint, string sessionId);
+        AbstractPromise HandleReceive(byte[] rawBytes, int offset, int length);
 
-        void OpenSessionHandler(IPEndPoint endpoint, ISessionHandler sessionHandler);
-        void HandleReceive(byte[] rawBytes, int offset, int length);
-        void HandleSend(IPEndPoint endpoint, ProtocolDatagram message, object cb);
+        AbstractPromise OpenSession(IPEndPoint endpoint, AbstractSessionHandler sessionHandler);
+        AbstractPromise HandleSend(IPEndPoint endpoint, ProtocolDatagram message);
+
+        AbstractPromise GenerateAbstractPromise(AbstractPromise.ExecutionCode code);
+        AbstractPromise GenerateAlreadySuccessfulAbstractPromise(object value);
+        AbstractPromise GenerateAlreadyFailedAbstractPromise(Exception reason);
+
+        AbstractPromise SetTimeout(long millis);
     }
 }

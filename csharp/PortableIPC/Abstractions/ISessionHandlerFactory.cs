@@ -7,6 +7,6 @@ namespace PortableIPC.Abstractions
 {
     public interface ISessionHandlerFactory
     {
-        ISessionHandler Create(IPEndPoint endpoint, string sessionId);
+        AbstractSessionHandler Create(IPEndPoint endpoint, string sessionId);
     }
 }

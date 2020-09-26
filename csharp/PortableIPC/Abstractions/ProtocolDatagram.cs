@@ -221,7 +221,10 @@ namespace PortableIPC.Abstractions
                     }
 
                     writer.Write(NullTerminator);
-                    writer.Write(DataBytes, DataOffset, DataLength);
+                    if (DataBytes != null)
+                    {
+                        writer.Write(DataBytes, DataOffset, DataLength);
+                    }
                 }
                 return ms.ToArray();
             }
