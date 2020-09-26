@@ -3,21 +3,19 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
-namespace TransactionCoordinatorProtocol
+namespace PortableIPC.Abstractions
 {
     public interface IEndpointHandler
     {
         EndpointConfig EndpointConfig { get; }
-        ISessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId); // handle null return as client mode handler
+
+        // handle null return as client mode handler
+        ISessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId);
+
         void RemoveSessionHandler(IPEndPoint endpoint, string sessionId);
 
         void OpenSessionHandler(IPEndPoint endpoint, ISessionHandler sessionHandler);
-        void HandleReceive();
+        void HandleReceive(byte[] rawBytes, int offset, int length);
         void HandleSend(IPEndPoint endpoint, ProtocolDatagram message, object cb);
-    }
-
-    public class DefaultEndpointHandler
-    {
-        
     }
 }

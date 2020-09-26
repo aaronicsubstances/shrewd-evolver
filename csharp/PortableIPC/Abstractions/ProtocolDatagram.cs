@@ -3,15 +3,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace TransactionCoordinatorProtocol
+namespace PortableIPC.Abstractions
 {
     public class ProtocolDatagram
     {
         public const short OpCodeOpen = 1;
-        public const short OpCodeClose = 2;
-        public const short OpCodeData = 3;
-        public const short OpCodeAck = 4;
+        public const short OpCodeData = 2;
+        public const short OpCodeAck = 3;
+        public const short OpCodeClose = 4;
         public const short OpCodeError = 5;
+        public const short OpCodeCloseAll = 6;
 
         public const int SessionIdLength = 50;
 
@@ -85,20 +86,33 @@ namespace TransactionCoordinatorProtocol
                 }
                 else
                 {
+                    // Identify known options first. In case of repetition, first one wins.
                     bool knownOptionEncountered = true;
                     switch (optionName)
                     {
                         case OptionNameDataLength:
-                            parsedDatagram.ExpectedDataLength = ParseOptionAsInt32(optionName, optionNameOrValue);
+                            if (parsedDatagram.ExpectedDataLength == null)
+                            {
+                                parsedDatagram.ExpectedDataLength = ParseOptionAsInt32(optionName, optionNameOrValue);
+                            }
                             break;
                         case OptionNameIdleTimeoutMillis:
-                            parsedDatagram.IdleTimeoutMillis = ParseOptionAsInt64(optionName, optionNameOrValue);
+                            if (parsedDatagram.IdleTimeoutMillis == null)
+                            {
+                                parsedDatagram.IdleTimeoutMillis = ParseOptionAsInt64(optionName, optionNameOrValue);
+                            }
                             break;
                         case OptionNameErrorCode:
-                            parsedDatagram.ErrorCode = ParseOptionAsInt32(optionName, optionNameOrValue);
+                            if (parsedDatagram.ErrorCode == null)
+                            {
+                                parsedDatagram.ErrorCode = ParseOptionAsInt32(optionName, optionNameOrValue);
+                            }
                             break;
                         case OptionNameErrorMessage:
-                            parsedDatagram.ErrorMessage = optionNameOrValue;
+                            if (parsedDatagram.ErrorMessage == null)
+                            {
+                                parsedDatagram.ErrorMessage = optionNameOrValue;
+                            }
                             break;
                         default:
                             knownOptionEncountered = false;
@@ -133,16 +147,19 @@ namespace TransactionCoordinatorProtocol
             return parsedDatagram;
         }
 
-        public string Validate()
+        public void Validate()
         {
-            if (ExpectedDataLength != null )
+            // Use data_length option to detect truncation of datagrams by network.
+            if (ExpectedDataLength != null)
             {
                 if (DataLength != ExpectedDataLength.Value)
                 {
-                    throw CreateException($"Invalid protocol datagram. Expected {ExpectedDataLength} bytes but received {DataLength}");
+                    throw CreateException($"data length check error! Expected {ExpectedDataLength} " +
+                        $"bytes but received {DataLength}");
                 }
             }
-            return null;
+            // Don't validate op code, to allow for extensions to protocol.
+            // Instead let SessionHandlers handle that.
         }
 
         public byte[] ToRawDatagram()
