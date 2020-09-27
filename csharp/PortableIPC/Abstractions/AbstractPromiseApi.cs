@@ -19,7 +19,7 @@ namespace PortableIPC.Abstractions
     /// 
     /// 3. Rejection handlers in NodeJS can return values and continue like no error happened.
     ///  - not so in C#. an error in async-await keyword usage results in an exception 
-    ///  Conclusion: only accept exceptions in rejection handlers, and don't allow them to return values.
+    ///  Conclusion: only accept exceptions in rejection handlers, but allow them to return values.
     /// </summary>
     public interface AbstractPromiseApi
     {
@@ -34,7 +34,8 @@ namespace PortableIPC.Abstractions
     public interface AbstractPromise<out T>
     {
         AbstractPromise<U> Then<U>(FulfilmentCallback<T, U> onFulfilled, RejectionCallback onRejected = null);
-        AbstractPromise<U> ThenCompose<U>(FulfilmentCallback<T, AbstractPromise<U>> onFulfilled, RejectionCallback onRejected = null);
+        AbstractPromise<U> ThenCompose<U>(FulfilmentCallback<T, AbstractPromise<U>> onFulfilled, 
+            FulfilmentCallback<Exception, AbstractPromise<U>> onRejected = null);
     }
 
     public delegate void ExecutionCodeOfPromise<out T>(Action<T> resolve, Action<Exception> reject);
