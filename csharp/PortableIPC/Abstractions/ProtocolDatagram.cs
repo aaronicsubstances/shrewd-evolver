@@ -143,23 +143,22 @@ namespace PortableIPC.Abstractions
             parsedDatagram.DataBytes = rawBytes;
             parsedDatagram.DataOffset = offset;
             parsedDatagram.DataLength = endOffset - offset;
+            
+            // Validate
 
-            return parsedDatagram;
-        }
-
-        public void Validate()
-        {
             // Use data_length option to detect truncation of datagrams by network.
-            if (ExpectedDataLength != null)
+            if (parsedDatagram.ExpectedDataLength != null)
             {
-                if (DataLength != ExpectedDataLength.Value)
+                if (parsedDatagram.DataLength != parsedDatagram.ExpectedDataLength.Value)
                 {
-                    throw CreateException($"data length check error! Expected {ExpectedDataLength} " +
-                        $"bytes but received {DataLength}");
+                    throw CreateException($"data length check error! Expected {parsedDatagram.ExpectedDataLength} " +
+                        $"bytes but received {parsedDatagram.DataLength}");
                 }
             }
             // Don't validate op code, to allow for extensions to protocol.
             // Instead let SessionHandlers handle that.
+            
+            return parsedDatagram;
         }
 
         public byte[] ToRawDatagram()

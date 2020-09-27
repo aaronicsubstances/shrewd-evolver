@@ -8,15 +8,17 @@ namespace PortableIPC.Abstractions
     public interface IEndpointHandler
     {
         EndpointConfig EndpointConfig { get; }
+        AbstractPromiseApi PromiseApi { get; }
 
-        // handle null return as client mode handler
-        AbstractSessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId);
+        
+
+        void AddSessionHandler(IPEndPoint endpoint, AbstractSessionHandler sessionHandler);
 
         void RemoveSessionHandler(IPEndPoint endpoint, string sessionId);
-        AbstractPromise<VoidReturn> HandleReceive(byte[] rawBytes, int offset, int length);
+        AbstractSessionHandler GetOrCreateSessionHandler(IPEndPoint endpoint, string sessionId);// handle null return as client mode handler
 
-        AbstractPromise<VoidReturn> OpenSession(IPEndPoint endpoint, AbstractSessionHandler sessionHandler);
+        AbstractPromise<VoidReturn> HandleReceive(IPEndPoint endpoint, byte[] rawBytes, int offset, int length);
         AbstractPromise<VoidReturn> HandleSend(IPEndPoint endpoint, ProtocolDatagram message);
-        AbstractPromiseApi PromiseApi { get; set; }
+        AbstractPromise<VoidReturn> HandleCloseAll(IPEndPoint endpoint);
     }
 }

@@ -11,83 +11,109 @@ namespace PortableIPC.Abstractions
     public class SendingSessionStateHandler: AbstractSessionStateHandler
     {
         private readonly AbstractPromiseApi _promiseApi;
-        private readonly long _ackTimeoutMillis;
 
         private Action<VoidReturn> _pendingResolveFunc;
         private Action<Exception> _pendingRejectFunc;
-        private AbstractPromise<VoidReturn> _ackTimeoutPromise;
 
         public SendingSessionStateHandler(AbstractSessionHandler sessionHandler)
             : base(sessionHandler)
         {
             _promiseApi = sessionHandler.EndpointHandler.PromiseApi;
-            _ackTimeoutMillis = sessionHandler.EndpointHandler.EndpointConfig.AckTimeoutMillis;
         }
 
-        public override void Init()
+        public override void Dispose(Exception error, bool timeout)
         {
-            _pendingResolveFunc = null;
-            _pendingRejectFunc = null;
-            _ackTimeoutPromise = null;
+            if (_pendingRejectFunc != null)
+            {
+                if (error == null)
+                {
+                    if (timeout)
+                    {
+                        error = new Exception("Session timed out");
+                    }
+                    else
+                    {
+                        error = new Exception("Session closed");
+                    }
+                }
+                _pendingRejectFunc.Invoke(error);
+                _pendingRejectFunc = null;
+            };
         }
 
-        public override IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout)
+        public override AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
         {
-            if (_pendingRejectFunc == null)
+            // should only be called after reset.
+            if (reset)
             {
                 return null;
             }
-            var closePromise = _promiseApi.Resolve(0);
-            FulfilmentCallback<int, VoidReturn> closeHandler = _ =>
+            if (message.OpCode != ProtocolDatagram.OpCodeAck)
             {
-                // pass error to application layer, outside of synchronization lock.
-                _pendingRejectFunc.Invoke(error);
                 return null;
-            };
-            return closePromise.WrapThen(closeHandler);
-        }
+            }
 
-        public override IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message)
-        {
             if (_pendingResolveFunc != null)
             {
-                _ackTimeoutPromise.Cancel();
+                SessionHandler.ClearAckTimeout();
                 SessionHandler._expectedSequenceNumber++;
                 SessionHandler._currentState = AbstractSessionHandler.SessionStateIndeterminate;
                 SessionHandler.SetIdleTimeout();
 
-                // pass to application layer by calling resolve function outside of synchronization lock.
-                var successPromise = _promiseApi.Resolve(0);
-                FulfilmentCallback<int, VoidReturn> successHandler = _ =>
+                // Pass to application layer by calling resolve function outside of synchronization lock.
+                FulfilmentCallback<object, AbstractPromise<VoidReturn>> transferHandler = _ =>
                 {
                     _pendingResolveFunc.Invoke(null);
-                    return null;
+                    _pendingResolveFunc = null;
+                    if (message.OpCode == ProtocolDatagram.OpCodeOpen)
+                    {
+                        return SessionHandler.OnOpen(message, false);
+                    }
+                    else
+                    {
+                        return SessionHandler.OnData(message, false);
+                    }
                 };
-                return successPromise.WrapThen(successHandler);
+                return _promiseApi.Resolve((object)null).WrapThenCompose(transferHandler);
             }
             else
             {
-                return ProcessDiscardedMessage(message);
+                return null;
             }
         }
 
-        public override IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message)
+        public override AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
         {
-            var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
-            FulfilmentCallback<object, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
-                SessionHandler.RunSessionStateHandlerCallback( _ => HandleSendConfirmation(message));
+            // should only be called during resets.
+            if (!reset)
+            {
+                return null;
+            }
+            if (message.OpCode != ProtocolDatagram.OpCodeOpen && message.OpCode != ProtocolDatagram.OpCodeData)
+            {
+                return null;
+            }
+
             SessionHandler._currentState = AbstractSessionHandler.SessionStateSending;
+            SessionHandler.ClearIdleTimeout();
+
+            _pendingResolveFunc = null;
+            _pendingRejectFunc = null;
+
+            if (message.OpCode == ProtocolDatagram.OpCodeOpen)
+            {
+                // Set connection parameters.
+                SessionHandler.IdleTimeoutMillis = message.IdleTimeoutMillis ?? 0L;
+            }
+            var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
+            FulfilmentCallback<VoidReturn, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
+                SessionHandler.RunSessionStateHandlerCallback( _ => HandleSendConfirmation(message));
             return sendConfirmationPromise.WrapThenCompose(sendConfirmationHandler);
         }
 
-        private IPromiseWrapper<VoidReturn> HandleSendConfirmation(ProtocolDatagram message)
+        private AbstractPromiseWrapper<VoidReturn> HandleSendConfirmation(ProtocolDatagram message)
         {
-            _ackTimeoutPromise = _promiseApi.SetTimeout(_ackTimeoutMillis);
-            FulfilmentCallback<object, AbstractPromise<VoidReturn>> ackTimeoutHandler = _ =>
-            {
-                return SessionHandler.HandleAckTimeout(message);
-            };
-
+            SessionHandler.SetAckTimeout();
             var ack = new ProtocolDatagram
             {
                 OpCode = ProtocolDatagram.OpCodeAck,

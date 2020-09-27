@@ -27,14 +27,14 @@ namespace PortableIPC.Abstractions
         AbstractPromise<T> Resolve<T>(T value);
         AbstractPromise<VoidReturn> Reject(Exception reason);
 
-        AbstractPromise<VoidReturn> SetTimeout(long millis);
+        object ScheduleTimeout(int seqNr, Action<int> cb, long millis);
+        void CancelTimeout(object id);
     }
 
     public interface AbstractPromise<out T>
     {
         AbstractPromise<U> Then<U>(FulfilmentCallback<T, U> onFulfilled, RejectionCallback onRejected = null);
         AbstractPromise<U> ThenCompose<U>(FulfilmentCallback<T, AbstractPromise<U>> onFulfilled, RejectionCallback onRejected = null);
-        void Cancel();
     }
 
     public delegate void ExecutionCodeOfPromise<out T>(Action<T> resolve, Action<Exception> reject);
@@ -42,12 +42,12 @@ namespace PortableIPC.Abstractions
     public delegate U FulfilmentCallback<in T, out U>(T value);
     public delegate void RejectionCallback(Exception reason);
 
-    public interface IPromiseWrapper<out T>
+    public interface AbstractPromiseWrapper<out T>
     {
         AbstractPromise<T> Unwrap();
     }
 
-    internal class SimplePromiseWrapper<T>: IPromiseWrapper<T>
+    internal class SimplePromiseWrapper<T>: AbstractPromiseWrapper<T>
     {
         private readonly AbstractPromise<T> _finalPromise;
         public SimplePromiseWrapper(AbstractPromise<T> finalPromise)
@@ -61,7 +61,7 @@ namespace PortableIPC.Abstractions
         }
     }
 
-    internal class PromiseWrappedWithCallback<T, U> : IPromiseWrapper<U>
+    internal class PromiseWrappedWithCallback<T, U> : AbstractPromiseWrapper<U>
     {
         private readonly AbstractPromise<T> _interimPromise;
         private readonly FulfilmentCallback<T, U> _thenCallback;
@@ -89,18 +89,18 @@ namespace PortableIPC.Abstractions
 
     public static class AbstractPromiseExtensions
     {
-        public static IPromiseWrapper<T> Wrap<T>(this AbstractPromise<T> finalPromise)
+        public static AbstractPromiseWrapper<T> Wrap<T>(this AbstractPromise<T> finalPromise)
         {
             return new SimplePromiseWrapper<T>(finalPromise);
         }
 
-        public static IPromiseWrapper<U> WrapThen<T, U>(this AbstractPromise<T> interimPromise,
+        public static AbstractPromiseWrapper<U> WrapThen<T, U>(this AbstractPromise<T> interimPromise,
             FulfilmentCallback<T, U> successCallback)
         {
             return new PromiseWrappedWithCallback<T, U>(interimPromise, successCallback, null);
         }
 
-        public static IPromiseWrapper<U> WrapThenCompose<T, U>(this AbstractPromise<T> interimPromise,
+        public static AbstractPromiseWrapper<U> WrapThenCompose<T, U>(this AbstractPromise<T> interimPromise,
             FulfilmentCallback<T, AbstractPromise<U>> successCallback)
         {
             return new PromiseWrappedWithCallback<T, U>(interimPromise, null, successCallback);

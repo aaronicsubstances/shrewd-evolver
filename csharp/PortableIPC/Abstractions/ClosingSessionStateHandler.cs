@@ -13,36 +13,43 @@ namespace PortableIPC.Abstractions
             : base(sessionHandler)
         { }
 
-        public override void Init()
+        public override void Dispose(Exception error, bool timeout)
+        { }
+
+        public override AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
         {
+            return InitiateClose(message, reset, true);
         }
 
-        public override IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout)
+        public override AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
         {
-            // todo later call application layer.
-            return null;
+            return InitiateClose(message, reset, false);
         }
 
-        public override IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message)
+        private AbstractPromiseWrapper<VoidReturn> InitiateClose(ProtocolDatagram message, bool reset, bool received)
         {
-            return HandlePostNetworkClosing(message);
-        }
+            // should only be called during resets.
+            if (!reset)
+            {
+                return null;
+            }
+            if (message.OpCode != ProtocolDatagram.OpCodeClose && message.OpCode != ProtocolDatagram.OpCodeError)
+            {
+                return null;
+            }
 
-        public override IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message)
-        {
-            var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
-            FulfilmentCallback<object, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
-                SessionHandler.RunSessionStateHandlerCallback(_ => HandlePostNetworkClosing(message));
-            SessionHandler._currentState = AbstractSessionHandler.SessionStateClosing;
-            return sendConfirmationPromise.WrapThenCompose(sendConfirmationHandler);
-        }
+            if (!received) 
+            {
+                // don't wait
+                _ = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
+            }
 
-        private IPromiseWrapper<VoidReturn> HandlePostNetworkClosing(ProtocolDatagram message)
-        {
-            SessionHandler._isClosed = true;
-            SessionHandler.EndpointHandler.RemoveSessionHandler(SessionHandler.ConnectedEndpoint, SessionHandler.SessionId);
-            // todo later call application layer.
-            return null;
+            Exception error = null;
+            if (message.OpCode == ProtocolDatagram.OpCodeError)
+            {
+                error = new Exception($"Session layer protocol error: {message.ErrorCode}: {message.ErrorMessage}");
+            }
+            return SessionHandler.HandleClosing(error, false);
         }
     }
 }
