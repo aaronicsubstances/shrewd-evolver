@@ -13,15 +13,10 @@ namespace PortableIPC.Abstractions
         AbstractSessionHandler GetOrAddSessionHandler(IPEndPoint endpoint, string sessionId);
 
         void RemoveSessionHandler(IPEndPoint endpoint, string sessionId);
-        AbstractPromise HandleReceive(byte[] rawBytes, int offset, int length);
+        AbstractPromise<VoidReturn> HandleReceive(byte[] rawBytes, int offset, int length);
 
-        AbstractPromise OpenSession(IPEndPoint endpoint, AbstractSessionHandler sessionHandler);
-        AbstractPromise HandleSend(IPEndPoint endpoint, ProtocolDatagram message);
-
-        AbstractPromise GenerateAbstractPromise(AbstractPromise.ExecutionCode code);
-        AbstractPromise GenerateAlreadySuccessfulAbstractPromise(object value);
-        AbstractPromise GenerateAlreadyFailedAbstractPromise(Exception reason);
-
-        AbstractPromise SetTimeout(long millis);
+        AbstractPromise<VoidReturn> OpenSession(IPEndPoint endpoint, AbstractSessionHandler sessionHandler);
+        AbstractPromise<VoidReturn> HandleSend(IPEndPoint endpoint, ProtocolDatagram message);
+        AbstractPromiseApi PromiseApi { get; set; }
     }
 }

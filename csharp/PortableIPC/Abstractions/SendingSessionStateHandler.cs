@@ -10,13 +10,19 @@ namespace PortableIPC.Abstractions
     /// </summary>
     public class SendingSessionStateHandler: AbstractSessionStateHandler
     {
-        private AbstractPromise.ResolutionFunction _pendingResolveFunc;
-        private AbstractPromise.RejectionFunction _pendingRejectFunc;
-        private AbstractPromise _ackTimeoutPromise;
+        private readonly AbstractPromiseApi _promiseApi;
+        private readonly long _ackTimeoutMillis;
+
+        private Action<VoidReturn> _pendingResolveFunc;
+        private Action<Exception> _pendingRejectFunc;
+        private AbstractPromise<VoidReturn> _ackTimeoutPromise;
 
         public SendingSessionStateHandler(AbstractSessionHandler sessionHandler)
             : base(sessionHandler)
-        { }
+        {
+            _promiseApi = sessionHandler.EndpointHandler.PromiseApi;
+            _ackTimeoutMillis = sessionHandler.EndpointHandler.EndpointConfig.AckTimeoutMillis;
+        }
 
         public override void Init()
         {
@@ -25,23 +31,23 @@ namespace PortableIPC.Abstractions
             _ackTimeoutPromise = null;
         }
 
-        public override AbstractPromiseWrapper Close(Exception error, bool timeout)
+        public override IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout)
         {
             if (_pendingRejectFunc == null)
             {
                 return null;
             }
-            var closePromise = GenerateAlreadySuccessfulAbstractPromise(null);
-            AbstractPromise.SuccessCallback closeHandler = _ =>
+            var closePromise = _promiseApi.Resolve(0);
+            FulfilmentCallback<int, VoidReturn> closeHandler = _ =>
             {
                 // pass error to application layer, outside of synchronization lock.
                 _pendingRejectFunc.Invoke(error);
                 return null;
             };
-            return new AbstractPromiseWrapper(closePromise, closeHandler);
+            return closePromise.WrapThen(closeHandler);
         }
 
-        public override AbstractPromiseWrapper ProcessReceive(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message)
         {
             if (_pendingResolveFunc != null)
             {
@@ -51,13 +57,13 @@ namespace PortableIPC.Abstractions
                 SessionHandler.SetIdleTimeout();
 
                 // pass to application layer by calling resolve function outside of synchronization lock.
-                var successPromise = GenerateAlreadySuccessfulAbstractPromise(null);
-                AbstractPromise.SuccessCallback successHandler = v =>
+                var successPromise = _promiseApi.Resolve(0);
+                FulfilmentCallback<int, VoidReturn> successHandler = _ =>
                 {
-                    _pendingResolveFunc.Invoke(v);
+                    _pendingResolveFunc.Invoke(null);
                     return null;
                 };
-                return new AbstractPromiseWrapper(successPromise, successHandler);
+                return successPromise.WrapThen(successHandler);
             }
             else
             {
@@ -65,19 +71,19 @@ namespace PortableIPC.Abstractions
             }
         }
 
-        public override AbstractPromiseWrapper ProcessSend(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message)
         {
             var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
-            AbstractPromise.SuccessCallback sendConfirmationHandler = _ =>
+            FulfilmentCallback<object, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
                 SessionHandler.RunSessionStateHandlerCallback( _ => HandleSendConfirmation(message));
             SessionHandler._currentState = AbstractSessionHandler.SessionStateSending;
-            return new AbstractPromiseWrapper(sendConfirmationPromise, sendConfirmationHandler);
+            return sendConfirmationPromise.WrapThenCompose(sendConfirmationHandler);
         }
 
-        private AbstractPromiseWrapper HandleSendConfirmation(ProtocolDatagram message)
+        private IPromiseWrapper<VoidReturn> HandleSendConfirmation(ProtocolDatagram message)
         {
-            _ackTimeoutPromise = SessionHandler.EndpointHandler.SetTimeout(SessionHandler.AckTimeoutMillis);
-            AbstractPromise.SuccessCallback ackTimeoutHandler = _ =>
+            _ackTimeoutPromise = _promiseApi.SetTimeout(_ackTimeoutMillis);
+            FulfilmentCallback<object, AbstractPromise<VoidReturn>> ackTimeoutHandler = _ =>
             {
                 return SessionHandler.HandleAckTimeout(message);
             };
@@ -88,12 +94,12 @@ namespace PortableIPC.Abstractions
                 SequenceNumber = message.SequenceNumber,
                 SessionId = message.SessionId
             };
-            var ackReceiptPromise = GenerateAbstractPromise((resolveFunc, rejectFunc) =>
+            var ackReceiptPromise = _promiseApi.Create<VoidReturn>((resolveFunc, rejectFunc) =>
             {
                 _pendingResolveFunc = resolveFunc;
                 _pendingRejectFunc = rejectFunc;
             });
-            return new AbstractPromiseWrapper(ackReceiptPromise);
+            return ackReceiptPromise.Wrap();
         }
     }
 }

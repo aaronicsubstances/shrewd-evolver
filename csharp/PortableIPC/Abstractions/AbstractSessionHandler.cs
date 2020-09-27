@@ -9,10 +9,10 @@ namespace PortableIPC.Abstractions
     public abstract class AbstractSessionHandler
     {
         // run these 4 serially
-        public abstract AbstractPromise ProcessReceive(ProtocolDatagram message);
-        public abstract AbstractPromise ProcessSend(ProtocolDatagram message);
-        protected internal abstract AbstractPromise HandleIdleTimeout();
-        public abstract AbstractPromise Close();
+        public abstract AbstractPromise<VoidReturn> ProcessReceive(ProtocolDatagram message);
+        public abstract AbstractPromise<VoidReturn> ProcessSend(ProtocolDatagram message);
+        protected internal abstract AbstractPromise<VoidReturn> HandleIdleTimeout();
+        public abstract AbstractPromise<VoidReturn> Close();
 
         protected internal static int SessionStateIndeterminate = 0;
         protected internal static int SessionStateReceiving = 1;
@@ -23,13 +23,6 @@ namespace PortableIPC.Abstractions
         public IPEndPoint ConnectedEndpoint { get; set; }
 
         public long IdleTimeoutMillis { get; set; }
-        public long AckTimeoutMillis
-        {
-            get
-            {
-                return EndpointHandler.EndpointConfig.AckTimeoutMillis;
-            }
-        }
         protected internal IEndpointHandler EndpointHandler { get; }
         protected internal string SessionId { get; }
 
@@ -39,32 +32,20 @@ namespace PortableIPC.Abstractions
         protected internal int _currentState;
 
         // runs code under sync lock.
-        protected internal abstract object RunSerially(AbstractExecutableCode code, object arg);
+        protected internal abstract U RunSerially<T, U>(AbstractExecutableCode<T, U> code, T arg);
 
         
         // run these 2 serially
 
-        protected internal abstract AbstractPromiseWrapper RunSessionStateHandlerCallback(AbstractExecutableCode code);
-        protected internal abstract AbstractPromiseWrapper HandleAckTimeout(ProtocolDatagram message);
+        protected internal abstract AbstractPromise<VoidReturn> RunSessionStateHandlerCallback(
+            AbstractExecutableCode<object, IPromiseWrapper<VoidReturn>> code);
+        protected internal abstract AbstractPromise<VoidReturn> HandleAckTimeout(ProtocolDatagram message);
 
 
         // don't run serially since it is always called by session state handlers in sync lock
-        protected internal abstract AbstractPromise ProcessDiscardedMessage(ProtocolDatagram message); 
+        protected internal abstract AbstractPromise<VoidReturn> ProcessDiscardedMessage(ProtocolDatagram message); 
 
         protected internal abstract void SetIdleTimeout(); // called by send/receive session state handlers.
-        protected internal abstract void ClearIdleTimeout(); // clear for both send and receive.
-
-        protected internal AbstractPromise GenerateAbstractPromise(AbstractPromise.ExecutionCode code)
-        {
-            return EndpointHandler.GenerateAbstractPromise(code);
-        }
-        protected internal AbstractPromise GenerateAlreadySuccessfulAbstractPromise(object value)
-        {
-            return EndpointHandler.GenerateAlreadySuccessfulAbstractPromise(value);
-        }
-        protected internal AbstractPromise GenerateAlreadyFailedAbstractPromise(Exception reason)
-        {
-            return EndpointHandler.GenerateAlreadyFailedAbstractPromise(reason);
-        }
+        protected internal abstract void ClearIdleTimeout(); // clear before calling both send and receive.
     }
 }

@@ -13,26 +13,13 @@ namespace PortableIPC.Abstractions
 
         public abstract void Init();
 
-        public abstract AbstractPromiseWrapper ProcessReceive(ProtocolDatagram message);
-        public abstract AbstractPromiseWrapper ProcessSend(ProtocolDatagram message);
+        public abstract IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message);
+        public abstract IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message);
 
-        public abstract AbstractPromiseWrapper Close(Exception error, bool timeout);
-        protected internal AbstractPromiseWrapper ProcessDiscardedMessage(ProtocolDatagram message)
+        public abstract IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout);
+        protected internal IPromiseWrapper<VoidReturn> ProcessDiscardedMessage(ProtocolDatagram message)
         {
-            return new AbstractPromiseWrapper(SessionHandler.ProcessDiscardedMessage(message), null);
-        }
-
-        protected internal AbstractPromise GenerateAbstractPromise(AbstractPromise.ExecutionCode code)
-        {
-            return SessionHandler.EndpointHandler.GenerateAbstractPromise(code);
-        }
-        protected internal AbstractPromise GenerateAlreadySuccessfulAbstractPromise(object value)
-        {
-            return SessionHandler.EndpointHandler.GenerateAlreadySuccessfulAbstractPromise(value);
-        }
-        protected internal AbstractPromise GenerateAlreadyFailedAbstractPromise(Exception reason)
-        {
-            return SessionHandler.EndpointHandler.GenerateAlreadyFailedAbstractPromise(reason);
+            return SessionHandler.ProcessDiscardedMessage(message).Wrap();
         }
     }
 }

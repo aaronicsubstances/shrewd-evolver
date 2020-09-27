@@ -17,13 +17,13 @@ namespace PortableIPC.Abstractions
         {
         }
 
-        public override AbstractPromiseWrapper Close(Exception error, bool timeout)
+        public override IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout)
         {
             // todo later call application layer.
             return null;
         }
 
-        public override AbstractPromiseWrapper ProcessReceive(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message)
         {
             var ack = new ProtocolDatagram
             {
@@ -32,13 +32,13 @@ namespace PortableIPC.Abstractions
                 SessionId = message.SessionId
             };
             var ackConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, ack);
-            AbstractPromise.SuccessCallback ackConfirmationHandler = _ =>
+            FulfilmentCallback<object, AbstractPromise<VoidReturn>> ackConfirmationHandler = _ =>
                 SessionHandler.RunSessionStateHandlerCallback( _ =>  HandleAckSendConfirmation());
             SessionHandler._currentState = AbstractSessionHandler.SessionStateReceiving;
-            return new AbstractPromiseWrapper(ackConfirmationPromise, ackConfirmationHandler);
+            return ackConfirmationPromise.WrapThenCompose(ackConfirmationHandler);
         }
 
-        private AbstractPromiseWrapper HandleAckSendConfirmation()
+        private IPromiseWrapper<VoidReturn> HandleAckSendConfirmation()
         {
             SessionHandler._expectedSequenceNumber++;
             SessionHandler._currentState = AbstractSessionHandler.SessionStateIndeterminate;
@@ -48,7 +48,7 @@ namespace PortableIPC.Abstractions
             return null;
         }
 
-        public override AbstractPromiseWrapper ProcessSend(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message)
         {
             return ProcessDiscardedMessage(message);
         }

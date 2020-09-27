@@ -17,27 +17,27 @@ namespace PortableIPC.Abstractions
         {
         }
 
-        public override AbstractPromiseWrapper Close(Exception error, bool timeout)
+        public override IPromiseWrapper<VoidReturn> Close(Exception error, bool timeout)
         {
             // todo later call application layer.
             return null;
         }
 
-        public override AbstractPromiseWrapper ProcessReceive(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message)
         {
             return HandlePostNetworkClosing(message);
         }
 
-        public override AbstractPromiseWrapper ProcessSend(ProtocolDatagram message)
+        public override IPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message)
         {
             var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
-            AbstractPromise.SuccessCallback sendConfirmationHandler = _ =>
+            FulfilmentCallback<object, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
                 SessionHandler.RunSessionStateHandlerCallback(_ => HandlePostNetworkClosing(message));
             SessionHandler._currentState = AbstractSessionHandler.SessionStateClosing;
-            return new AbstractPromiseWrapper(sendConfirmationPromise, sendConfirmationHandler);
+            return sendConfirmationPromise.WrapThenCompose(sendConfirmationHandler);
         }
 
-        private AbstractPromiseWrapper HandlePostNetworkClosing(ProtocolDatagram message)
+        private IPromiseWrapper<VoidReturn> HandlePostNetworkClosing(ProtocolDatagram message)
         {
             SessionHandler._isClosed = true;
             SessionHandler.EndpointHandler.RemoveSessionHandler(SessionHandler.ConnectedEndpoint, SessionHandler.SessionId);
