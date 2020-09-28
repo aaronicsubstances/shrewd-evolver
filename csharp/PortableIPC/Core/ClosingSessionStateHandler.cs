@@ -51,7 +51,7 @@ namespace PortableIPC.Core
             Exception error = null;
             if (message.OpCode == ProtocolDatagram.OpCodeError)
             {
-                error = new Exception($"Session layer protocol error: {message.ErrorCode}: {message.ErrorMessage}");
+                error = new Exception($"Session layer protocol error {message.ErrorCode}: {message.ErrorMessage}");
             }
             return _sessionHandler.HandleClosing(error, false);
         }

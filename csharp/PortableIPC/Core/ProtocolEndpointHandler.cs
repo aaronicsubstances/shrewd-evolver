@@ -164,8 +164,21 @@ namespace PortableIPC.Core
             });
         }
 
-        public void AddSessionHandler(IPEndPoint endpoint, DefaultSessionHandler sessionHandler)
+        public AbstractPromise<VoidReturn> OpenSession(IPEndPoint endpoint, DefaultSessionHandler sessionHandler,
+            ProtocolDatagram message)
         {
+            if (sessionHandler.SessionId == null)
+            {
+                return PromiseApi.Reject(new Exception("session handler has null session id"));
+            }
+            if (message.SessionId != sessionHandler.SessionId)
+            {
+                return PromiseApi.Reject(new Exception("message session id differs from that of session handler"));
+            }
+            if (message.OpCode != ProtocolDatagram.OpCodeOpen || message.SequenceNumber != 0)
+            {
+                return PromiseApi.Reject(new Exception("invalid opening message"));
+            }
             lock (_sessionHandlerMap)
             {
                 Dictionary<string, DefaultSessionHandler> subDict;
@@ -180,6 +193,7 @@ namespace PortableIPC.Core
                 }
                 subDict.Add(sessionHandler.SessionId, sessionHandler);
             }
+            return sessionHandler.ProcessSend(message);
         }
 
         internal void RemoveSessionHandler(IPEndPoint endpoint, string sessionId)

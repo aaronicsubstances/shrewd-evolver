@@ -225,9 +225,14 @@ namespace PortableIPC.Core
             AbstractPromiseWrapper<VoidReturn> promiseWrapper = null;
             lock (this)
             {
-                if (!_isClosed && seqNr == _idleTimeoutSeqNr)
+                if (seqNr == _idleTimeoutSeqNr)
                 {
-                    promiseWrapper = HandleClosing(null, true);
+                    _lastIdleTimeoutId = null;
+                    _idleTimeoutSeqNr++;
+                    if (!_isClosed)
+                    {
+                        promiseWrapper = HandleClosing(null, true);
+                    }
                 }
             }
             UnwrapVoidPromiseWrapper(promiseWrapper);
