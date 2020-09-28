@@ -1,27 +1,30 @@
-﻿using System;
+﻿using PortableIPC.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PortableIPC.Abstractions
+namespace PortableIPC.Core
 {
     /// <summary>
     /// This session state handler processes sending of non-ack PDUs which do not terminate a session.
     /// Also processes receipt of acknowledgments.
     /// </summary>
-    public class SendingSessionStateHandler: AbstractSessionStateHandler
+    public class SendingSessionStateHandler: ISessionStateHandler
     {
+        private readonly DefaultSessionHandler _sessionHandler;
         private readonly AbstractPromiseApi _promiseApi;
 
+        private bool _isOpened = false;
         private Action<VoidReturn> _pendingResolveFunc;
         private Action<Exception> _pendingRejectFunc;
 
-        public SendingSessionStateHandler(AbstractSessionHandler sessionHandler)
-            : base(sessionHandler)
+        public SendingSessionStateHandler(DefaultSessionHandler sessionHandler)
         {
+            _sessionHandler = sessionHandler;
             _promiseApi = sessionHandler.EndpointHandler.PromiseApi;
         }
 
-        public override void Dispose(Exception error, bool timeout)
+        public void Dispose(Exception error, bool timeout)
         {
             if (_pendingRejectFunc != null)
             {
@@ -41,7 +44,7 @@ namespace PortableIPC.Abstractions
             };
         }
 
-        public override AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
+        public AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
         {
             // should only be called after reset.
             if (reset)
@@ -55,10 +58,9 @@ namespace PortableIPC.Abstractions
 
             if (_pendingResolveFunc != null)
             {
-                SessionHandler.ClearAckTimeout();
-                SessionHandler._expectedSequenceNumber++;
-                SessionHandler._currentState = AbstractSessionHandler.SessionStateIndeterminate;
-                SessionHandler.SetIdleTimeout();
+                _sessionHandler.ResetIdleTimeout();
+                _sessionHandler._expectedSequenceNumber++;
+                _sessionHandler._currentState = DefaultSessionHandler.SessionStateIndeterminate;
 
                 // Pass to application layer by calling resolve function outside of synchronization lock.
                 FulfilmentCallback<object, AbstractPromise<VoidReturn>> transferHandler = _ =>
@@ -67,11 +69,11 @@ namespace PortableIPC.Abstractions
                     _pendingResolveFunc = null;
                     if (message.OpCode == ProtocolDatagram.OpCodeOpen)
                     {
-                        return SessionHandler.OnOpen(message, false);
+                        return _sessionHandler.OnOpenSent(message);
                     }
                     else
                     {
-                        return SessionHandler.OnData(message, false);
+                        return _sessionHandler.OnDataSent(message);
                     }
                 };
                 return _promiseApi.Resolve((object)null).WrapThenCompose(transferHandler);
@@ -82,20 +84,35 @@ namespace PortableIPC.Abstractions
             }
         }
 
-        public override AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
+        public AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
         {
             // should only be called during resets.
             if (!reset)
             {
                 return null;
             }
-            if (message.OpCode != ProtocolDatagram.OpCodeOpen && message.OpCode != ProtocolDatagram.OpCodeData)
+            if (message.OpCode == ProtocolDatagram.OpCodeOpen)
+            {
+                if (_isOpened)
+                {
+                    return null;
+                }
+                _isOpened = true;
+            }
+            else if (message.OpCode == ProtocolDatagram.OpCodeData)
+            {
+                if (!_isOpened)
+                {
+                    return null;
+                }
+            }
+            else
             {
                 return null;
             }
 
-            SessionHandler._currentState = AbstractSessionHandler.SessionStateSending;
-            SessionHandler.ClearIdleTimeout();
+            _sessionHandler._currentState = DefaultSessionHandler.SessionStateSending;
+            _sessionHandler.ResetIdleTimeout();
 
             _pendingResolveFunc = null;
             _pendingRejectFunc = null;
@@ -103,17 +120,17 @@ namespace PortableIPC.Abstractions
             if (message.OpCode == ProtocolDatagram.OpCodeOpen)
             {
                 // Set connection parameters.
-                SessionHandler.IdleTimeoutMillis = message.IdleTimeoutMillis ?? 0L;
+                _sessionHandler.SetSessionParametersOnOpen(message);
             }
-            var sendConfirmationPromise = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
+            var sendConfirmationPromise = _sessionHandler.EndpointHandler.HandleSend(_sessionHandler.ConnectedEndpoint, message);
             FulfilmentCallback<VoidReturn, AbstractPromise<VoidReturn>> sendConfirmationHandler = _ =>
-                SessionHandler.RunSessionStateHandlerCallback( _ => HandleSendConfirmation(message));
+                _sessionHandler.RunSessionStateHandlerCallback( _ => HandleSendConfirmation(message));
             return sendConfirmationPromise.WrapThenCompose(sendConfirmationHandler);
         }
 
         private AbstractPromiseWrapper<VoidReturn> HandleSendConfirmation(ProtocolDatagram message)
         {
-            SessionHandler.SetAckTimeout();
+            _sessionHandler.ResetAckTimeout();
             var ack = new ProtocolDatagram
             {
                 OpCode = ProtocolDatagram.OpCodeAck,

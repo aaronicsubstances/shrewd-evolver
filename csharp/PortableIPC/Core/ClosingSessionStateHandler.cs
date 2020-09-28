@@ -1,27 +1,31 @@
-﻿using System;
+﻿using PortableIPC.Abstractions;
+using System;
 using System.Collections.Generic;
 using System.Text;
 
-namespace PortableIPC.Abstractions
+namespace PortableIPC.Core
 {
     /// <summary>
     /// Processes receipt or sending of PDUs which terminate a session.
     /// </summary>
-    public class ClosingSessionStateHandler : AbstractSessionStateHandler
+    public class ClosingSessionStateHandler : ISessionStateHandler
     {
-        public ClosingSessionStateHandler(AbstractSessionHandler sessionHandler)
-            : base(sessionHandler)
+        private readonly DefaultSessionHandler _sessionHandler;
+
+        public ClosingSessionStateHandler(DefaultSessionHandler sessionHandler)
+        {
+            _sessionHandler = sessionHandler;
+        }
+
+        public void Dispose(Exception error, bool timeout)
         { }
 
-        public override void Dispose(Exception error, bool timeout)
-        { }
-
-        public override AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
+        public AbstractPromiseWrapper<VoidReturn> ProcessReceive(ProtocolDatagram message, bool reset)
         {
             return InitiateClose(message, reset, true);
         }
 
-        public override AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
+        public AbstractPromiseWrapper<VoidReturn> ProcessSend(ProtocolDatagram message, bool reset)
         {
             return InitiateClose(message, reset, false);
         }
@@ -41,7 +45,7 @@ namespace PortableIPC.Abstractions
             if (!received) 
             {
                 // don't wait
-                _ = SessionHandler.EndpointHandler.HandleSend(SessionHandler.ConnectedEndpoint, message);
+                _ = _sessionHandler.EndpointHandler.HandleSend(_sessionHandler.ConnectedEndpoint, message);
             }
 
             Exception error = null;
@@ -49,7 +53,7 @@ namespace PortableIPC.Abstractions
             {
                 error = new Exception($"Session layer protocol error: {message.ErrorCode}: {message.ErrorMessage}");
             }
-            return SessionHandler.HandleClosing(error, false);
+            return _sessionHandler.HandleClosing(error, false);
         }
     }
 }

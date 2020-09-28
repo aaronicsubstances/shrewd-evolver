@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Text;
 
-namespace PortableIPC.Abstractions
+namespace PortableIPC.Core
 {
     public class ProtocolDatagram
     {

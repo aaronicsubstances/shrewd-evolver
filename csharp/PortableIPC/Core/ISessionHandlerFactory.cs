@@ -3,10 +3,10 @@ using System.Collections.Generic;
 using System.Net;
 using System.Text;
 
-namespace PortableIPC.Abstractions
+namespace PortableIPC.Core
 {
     public interface ISessionHandlerFactory
     {
-        AbstractSessionHandler Create(IPEndPoint endpoint, string sessionId);
+        DefaultSessionHandler Create(IPEndPoint endpoint, string sessionId);
     }
 }
