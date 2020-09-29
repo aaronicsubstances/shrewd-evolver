@@ -27,57 +27,32 @@ namespace PortableIPC.Core
 
         public AbstractPromiseApi PromiseApi { get; }
 
-        public AbstractPromise<VoidReturn> HandleSend(IPEndPoint endpoint, ProtocolDatagram message)
+        public AbstractPromise<VoidReturn> OpenSession(IPEndPoint endpoint, DefaultSessionHandler sessionHandler,
+            ProtocolDatagram message)
         {
-            lock (_disposeLock)
+            if (sessionHandler.SessionId == null)
             {
-                if (_isDisposing)
-                {
-                    return PromiseApi.Reject(new Exception("endpoint handler is shutting down"));
-                }
+                return PromiseApi.Reject(new Exception("session handler has null session id"));
             }
-
-            // send through datagram socket.
-            byte[] pdu;
-            try
-            {
-                pdu = message.ToRawDatagram();
-            }
-            catch (Exception ex)
-            {
-                return PromiseApi.Reject(ex);
-            }
-            return HandleException(NetworkSocket.HandleSend(endpoint, pdu, 0, pdu.Length));
-        }
-
-        public AbstractPromise<VoidReturn> Shutdown()
-        {
-            // swallow exceptions.
-            lock (_disposeLock)
-            {
-                if (_isDisposing)
-                {
-                    return _voidReturnPromise;
-                }
-                _isDisposing = true;
-            }
-
-            List<IPEndPoint> endpoints;
+            message.SessionId = sessionHandler.SessionId;
+            message.OpCode = ProtocolDatagram.OpCodeOpen;
+            message.SequenceNumberRangeStart = 0;
+            message.SequenceNumberRangeEnd = 0;
             lock (_sessionHandlerMap)
             {
-                endpoints = _sessionHandlerMap.Keys.ToList();
+                Dictionary<string, DefaultSessionHandler> subDict;
+                if (_sessionHandlerMap.ContainsKey(endpoint))
+                {
+                    subDict = _sessionHandlerMap[endpoint];
+                }
+                else
+                {
+                    subDict = new Dictionary<string, DefaultSessionHandler>();
+                    _sessionHandlerMap.Add(endpoint, subDict);
+                }
+                subDict.Add(sessionHandler.SessionId, sessionHandler);
             }
-            var retVal = _voidReturnPromise;
-            foreach (var endpoint in endpoints)
-            {
-                retVal = _voidReturnPromise.ThenCompose(_ => HandleSendCloseAll(endpoint));
-            }
-            lock(_sessionHandlerMap)
-            {
-                _sessionHandlerMap.Clear();
-            }
-
-            return retVal;
+            return sessionHandler.ProcessSend(message);
         }
 
         public AbstractPromise<VoidReturn> HandleReceive(IPEndPoint endpoint, byte[] rawBytes, int offset, int length)
@@ -115,6 +90,29 @@ namespace PortableIPC.Core
             }
         }
 
+        public AbstractPromise<VoidReturn> HandleSend(IPEndPoint endpoint, ProtocolDatagram message)
+        {
+            lock (_disposeLock)
+            {
+                if (_isDisposing)
+                {
+                    return PromiseApi.Reject(new Exception("endpoint handler is shutting down"));
+                }
+            }
+
+            // send through datagram socket.
+            byte[] pdu;
+            try
+            {
+                pdu = message.ToRawDatagram();
+            }
+            catch (Exception ex)
+            {
+                return PromiseApi.Reject(ex);
+            }
+            return HandleException(NetworkSocket.HandleSend(endpoint, pdu, 0, pdu.Length));
+        }
+
         public AbstractPromise<VoidReturn> HandleSendCloseAll(IPEndPoint endpoint)
         {
             ProtocolDatagram pdu = new ProtocolDatagram
@@ -125,6 +123,36 @@ namespace PortableIPC.Core
             // swallow any send exception.
             return HandleSend(endpoint, pdu).
                 ThenCompose(_ => HandleReceiveCloseAll(endpoint), _ => _voidReturnPromise);
+        }
+
+        public AbstractPromise<VoidReturn> Shutdown()
+        {
+            // swallow exceptions.
+            lock (_disposeLock)
+            {
+                if (_isDisposing)
+                {
+                    return _voidReturnPromise;
+                }
+                _isDisposing = true;
+            }
+
+            List<IPEndPoint> endpoints;
+            lock (_sessionHandlerMap)
+            {
+                endpoints = _sessionHandlerMap.Keys.ToList();
+            }
+            var retVal = _voidReturnPromise;
+            foreach (var endpoint in endpoints)
+            {
+                retVal = _voidReturnPromise.ThenCompose(_ => HandleSendCloseAll(endpoint));
+            }
+            lock (_sessionHandlerMap)
+            {
+                _sessionHandlerMap.Clear();
+            }
+
+            return retVal;
         }
 
         private AbstractPromise<VoidReturn> HandleReceiveCloseAll(IPEndPoint endpoint)
@@ -162,38 +190,6 @@ namespace PortableIPC.Core
                 // log.
                 return _voidReturnPromise;
             });
-        }
-
-        public AbstractPromise<VoidReturn> OpenSession(IPEndPoint endpoint, DefaultSessionHandler sessionHandler,
-            ProtocolDatagram message)
-        {
-            if (sessionHandler.SessionId == null)
-            {
-                return PromiseApi.Reject(new Exception("session handler has null session id"));
-            }
-            if (message.SessionId != sessionHandler.SessionId)
-            {
-                return PromiseApi.Reject(new Exception("message session id differs from that of session handler"));
-            }
-            if (message.OpCode != ProtocolDatagram.OpCodeOpen || message.SequenceNumber != 0)
-            {
-                return PromiseApi.Reject(new Exception("invalid opening message"));
-            }
-            lock (_sessionHandlerMap)
-            {
-                Dictionary<string, DefaultSessionHandler> subDict;
-                if (_sessionHandlerMap.ContainsKey(endpoint))
-                {
-                    subDict = _sessionHandlerMap[endpoint];
-                }
-                else
-                {
-                    subDict = new Dictionary<string, DefaultSessionHandler>();
-                    _sessionHandlerMap.Add(endpoint, subDict);
-                }
-                subDict.Add(sessionHandler.SessionId, sessionHandler);
-            }
-            return sessionHandler.ProcessSend(message);
         }
 
         internal void RemoveSessionHandler(IPEndPoint endpoint, string sessionId)

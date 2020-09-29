@@ -7,55 +7,74 @@ namespace PortableIPC.Core
 {
     public class ProtocolDatagram
     {
-        public const short OpCodeOpen = 1;
-        public const short OpCodeData = 2;
-        public const short OpCodeAck = 3;
-        public const short OpCodeClose = 4;
-        public const short OpCodeError = 5;
-        public const short OpCodeCloseAll = 6;
+        public const byte OpCodeOpen = 1;
+        public const byte OpCodeData = 2;
+        public const byte OpCodeAck = 3;
+        public const byte OpCodeClose = 4;
+        public const byte OpCodeError = 5;
+        public const byte OpCodeCloseAll = 6;
+
+        public const byte ChecksumTypeNull = 0;
+        public const byte ChecksumTypeLength = 1;
+        public const byte ChecksumTypeLRC = 2;
+        public const byte ChecksumTypeLengthAndLRC = 3;
+
+        private const byte NullTerminator = 0;
 
         public const int SessionIdLength = 50;
 
-        // opCode, sessionId, sequence number, null terminator are always present.
-        private const int MinDatagramSize = 2 + SessionIdLength + 2 + 1;
+        // opCode, sessionId, sequence number, checksum_type, null terminator are always present.
+        private const int MinDatagramSize = 1 + SessionIdLength + 4*2 + 1 + 1;
 
-        private static readonly byte NullTerminator = 0;
-
-        private const string OptionNameDataLength = "data_length";
+        private const string OptionNameRetryCount = "retry_count";
+        private const string OptionNameWindowSize = "window_size";
         private const string OptionNameIdleTimeoutMillis = "idle_timeout_millis";
+        private const string OptionNameAckTimeoutMillis = "ack_timeout_millis";
         private const string OptionNameErrorCode = "error_code";
         private const string OptionNameErrorMessage = "error_message";
 
-        public short OpCode { get; set; }
+        public byte OpCode { get; set; }
         public string SessionId { get; set; }
-        public short SequenceNumber { get; set; }
+        public int SequenceNumberRangeStart { get; set; }
+        public int SequenceNumberRangeEnd { get; set; }
+        public byte ChecksumType { get; set; }
         public Dictionary<string, List<string>> RemainingOptions { get; set; }
         public byte[] DataBytes { get; set; }
         public int DataOffset { get; set; }
         public int DataLength { get; set; }
-        public int? ExpectedDataLength { get; set; }
-        public long? IdleTimeoutMillis { get; set; }
-        public int? ErrorCode { get; set; }
+
+        // Known options.
+        public short? RetryCount { get; set; }
+        public short? WindowSize { get; set; }
+        public int? AckTimeoutMillis { get; set; }
+        public int? IdleTimeoutMillis { get; set; }
+        public short? ErrorCode { get; set; }
         public string ErrorMessage { get; set; }
 
         public static ProtocolDatagram Parse(byte[] rawBytes, int offset, int length)
         {
             if (length < MinDatagramSize)
             {
-                throw CreateException("datagram too small to be valid");
+                throw new Exception("datagram too small to be valid");
             }
 
             var parsedDatagram = new ProtocolDatagram();
             int endOffset = offset + length;
 
-            parsedDatagram.OpCode = ReadInt16BigEndian(rawBytes, offset);
-            offset += 2;
+            parsedDatagram.OpCode = rawBytes[offset];
+            offset += 1;
 
             parsedDatagram.SessionId = ConvertBytesToString(rawBytes, offset, SessionIdLength);
             offset += SessionIdLength;
 
-            parsedDatagram.SequenceNumber = ReadInt16BigEndian(rawBytes, offset);
-            offset += 2;
+            parsedDatagram.SequenceNumberRangeStart = ReadInt32BigEndian(rawBytes, offset);
+            offset += 4;
+
+            parsedDatagram.SequenceNumberRangeEnd = ReadInt32BigEndian(rawBytes, offset);
+            offset += 4;
+
+            parsedDatagram.ChecksumType = rawBytes[offset];
+            offset += 1;
 
             // Now read options until we encounter null terminator for all options, 
             // which is equivalent to empty string option name 
@@ -74,7 +93,7 @@ namespace PortableIPC.Core
                 }
                 if (nullTerminatorIndex == -1)
                 {
-                    throw CreateException("null terminator for all options not found");
+                    throw new Exception("null terminator for all options not found");
                 }
 
                 var optionNameOrValue = ConvertBytesToString(rawBytes, offset, nullTerminatorIndex);
@@ -90,22 +109,34 @@ namespace PortableIPC.Core
                     bool knownOptionEncountered = true;
                     switch (optionName)
                     {
-                        case OptionNameDataLength:
-                            if (parsedDatagram.ExpectedDataLength == null)
+                        case OptionNameRetryCount:
+                            if (parsedDatagram.RetryCount == null)
                             {
-                                parsedDatagram.ExpectedDataLength = ParseOptionAsInt32(optionName, optionNameOrValue);
+                                parsedDatagram.RetryCount = ParseOptionAsInt16(optionName, optionNameOrValue);
+                            }
+                            break;
+                        case OptionNameWindowSize:
+                            if (parsedDatagram.WindowSize == null)
+                            {
+                                parsedDatagram.WindowSize = ParseOptionAsInt16(optionName, optionNameOrValue);
                             }
                             break;
                         case OptionNameIdleTimeoutMillis:
                             if (parsedDatagram.IdleTimeoutMillis == null)
                             {
-                                parsedDatagram.IdleTimeoutMillis = ParseOptionAsInt64(optionName, optionNameOrValue);
+                                parsedDatagram.IdleTimeoutMillis = ParseOptionAsInt32(optionName, optionNameOrValue);
+                            }
+                            break;
+                        case OptionNameAckTimeoutMillis:
+                            if (parsedDatagram.AckTimeoutMillis == null)
+                            {
+                                parsedDatagram.AckTimeoutMillis = ParseOptionAsInt32(optionName, optionNameOrValue);
                             }
                             break;
                         case OptionNameErrorCode:
                             if (parsedDatagram.ErrorCode == null)
                             {
-                                parsedDatagram.ErrorCode = ParseOptionAsInt32(optionName, optionNameOrValue);
+                                parsedDatagram.ErrorCode = ParseOptionAsInt16(optionName, optionNameOrValue);
                             }
                             break;
                         case OptionNameErrorMessage:
@@ -143,48 +174,49 @@ namespace PortableIPC.Core
             parsedDatagram.DataBytes = rawBytes;
             parsedDatagram.DataOffset = offset;
             parsedDatagram.DataLength = endOffset - offset;
-            
-            // Validate
 
-            // Use data_length option to detect truncation of datagrams by network.
-            if (parsedDatagram.ExpectedDataLength != null)
-            {
-                if (parsedDatagram.DataLength != parsedDatagram.ExpectedDataLength.Value)
-                {
-                    throw CreateException($"data length check error! Expected {parsedDatagram.ExpectedDataLength} " +
-                        $"bytes but received {parsedDatagram.DataLength}");
-                }
-            }
-            // Don't validate op code, to allow for extensions to protocol.
-            // Instead let SessionHandlers handle that.
-            
+            int checksumLength = ValidateChecksum(rawBytes, offset, parsedDatagram.DataLength, parsedDatagram.ChecksumType);
+            parsedDatagram.DataLength -= checksumLength;
+
             return parsedDatagram;
         }
 
         public byte[] ToRawDatagram()
         {
+            byte[] rawBytes;
+            int checksumLength = DetermineChecksumLength(ChecksumType);
             using (var ms = new MemoryStream())
             {
                 using (var writer = new BinaryWriter(ms))
                 {
-                    WriteInt16BigEndian(writer, OpCode);
+                    writer.Write(OpCode);
                     byte[] sessionId = ConvertStringToBytes(SessionId);
                     if (sessionId.Length != SessionIdLength)
                     {
-                        throw CreateException($"Received invalid session id: {SessionId} produces {sessionId.Length} bytes");
+                        throw new Exception($"Received invalid session id: {SessionId} produces {sessionId.Length} bytes");
                     }
                     writer.Write(sessionId);
-                    WriteInt16BigEndian(writer, SequenceNumber);
+                    WriteInt32BigEndian(writer, SequenceNumberRangeStart);
+                    WriteInt32BigEndian(writer, SequenceNumberRangeEnd);
+                    writer.Write(ChecksumType);
 
                     // write out all options, starting with known ones.
                     var knownOptions = new Dictionary<string, string>();
-                    if (ExpectedDataLength != null)
+                    if (RetryCount != null)
                     {
-                        knownOptions.Add(OptionNameDataLength, ExpectedDataLength.ToString());
+                        knownOptions.Add(OptionNameRetryCount, RetryCount.ToString());
+                    }
+                    if (WindowSize != null)
+                    {
+                        knownOptions.Add(OptionNameWindowSize, WindowSize.ToString());
                     }
                     if (IdleTimeoutMillis != null)
                     {
                         knownOptions.Add(OptionNameIdleTimeoutMillis, IdleTimeoutMillis.ToString());
+                    }
+                    if (AckTimeoutMillis != null)
+                    {
+                        knownOptions.Add(OptionNameAckTimeoutMillis, AckTimeoutMillis.ToString());
                     }
                     if (ErrorCode != null)
                     {
@@ -224,32 +256,125 @@ namespace PortableIPC.Core
                     {
                         writer.Write(DataBytes, DataOffset, DataLength);
                     }
+                    for (int i = 0; i < checksumLength; i++)
+                    {
+                        writer.Write((byte) 0);
+                    }
                 }
-                return ms.ToArray();
+                rawBytes = ms.ToArray();
+            }
+            InsertChecksum(rawBytes, ChecksumType);
+            return rawBytes;
+        }
+
+        internal static int DetermineChecksumLength(short checksumType)
+        {
+            switch (checksumType)
+            {
+                case ChecksumTypeNull:
+                    return 0;
+                case ChecksumTypeLength:
+                    return 2;
+                case ChecksumTypeLRC:
+                    return 1;
+                case ChecksumTypeLengthAndLRC:
+                    return 3;
+                default:
+                    throw new Exception("Unknown checksum type: " + checksumType);
             }
         }
 
-        internal static Exception CreateException(string message)
+        internal static void InsertChecksum(byte[] rawBytes, short checksumType)
         {
-            return new Exception(message);
+            switch (checksumType)
+            {
+                case ChecksumTypeNull:
+                    return;
+                case ChecksumTypeLength:
+                    WriteInt16BigEndian(rawBytes, rawBytes.Length - 2, (short)(rawBytes.Length - 2));
+                    break;
+                case ChecksumTypeLRC:
+                    rawBytes[rawBytes.Length - 1] = CalculateLongitudinalParityCheck(rawBytes, 0, rawBytes.Length - 1);
+                    break;
+                case ChecksumTypeLengthAndLRC:
+                    WriteInt16BigEndian(rawBytes, rawBytes.Length - 3, (short)(rawBytes.Length - 3));
+                    rawBytes[rawBytes.Length - 1] = CalculateLongitudinalParityCheck(rawBytes, 0, rawBytes.Length - 3);
+                    break;
+                default:
+                    throw new Exception("Unknown checksum type: " + checksumType);
+            }
+        }
+
+        private static int ValidateChecksum(byte[] rawBytes, int offset, int length, short checksumType)
+        {
+            int checksumLength = DetermineChecksumLength(checksumType);
+            if (length < checksumLength)
+            {
+                throw new Exception("received truncated message: couldn't find checksum.");
+            }
+            int expectedLen, expectedLrc;
+            switch (checksumType)
+            {
+                case ChecksumTypeNull:
+                    return 0;
+                case ChecksumTypeLength:
+                    expectedLen = ReadInt16BigEndian(rawBytes, offset + length - 2);
+                    if (length != expectedLen)
+                    {
+                        throw new Exception("checksum error");
+                    }
+                    break;
+                case ChecksumTypeLRC:
+                    expectedLrc = CalculateLongitudinalParityCheck(rawBytes, offset, length - 1);
+                    if (rawBytes[offset + length - 1] != expectedLrc)
+                    {
+                        throw new Exception("checksum error");
+                    }
+                    break;
+                case ChecksumTypeLengthAndLRC:
+                    expectedLen = ReadInt16BigEndian(rawBytes, offset + length - 3);
+                    if (length != expectedLen)
+                    {
+                        throw new Exception("checksum error");
+                    }
+                    expectedLrc = CalculateLongitudinalParityCheck(rawBytes, offset, length - 3);
+                    if (rawBytes[offset + length - 1] != expectedLrc)
+                    {
+                        throw new Exception("checksum error");
+                    }
+                    break;
+                default:
+                    throw new Exception("Unknown checksum type: " + checksumType);
+            }
+            return checksumLength;
+        }
+
+        internal static byte CalculateLongitudinalParityCheck(byte[] byteData, int offset, int length)
+        {
+            byte chkSumByte = 0x00;
+            for (int i = offset; i < offset + length; i++)
+            {
+                chkSumByte ^= byteData[i];
+            }
+            return chkSumByte;
+        }
+
+        internal static short ParseOptionAsInt16(string optionName, string optionValue)
+        {
+            if (short.TryParse(optionValue, out short val))
+            {
+                return val;
+            }
+            throw new Exception($"Received invalid value for option {optionName}: {optionValue}");
         }
 
         internal static int ParseOptionAsInt32(string optionName, string optionValue)
         {
-            if (int.TryParse(optionValue, out int intVal))
+            if (int.TryParse(optionValue, out int val))
             {
-                return intVal;
+                return val;
             }
-            throw CreateException($"Received invalid value for option {optionName}: {optionValue}");
-        }
-
-        internal static long ParseOptionAsInt64(string optionName, string optionValue)
-        {
-            if (long.TryParse(optionValue, out long intVal))
-            {
-                return intVal;
-            }
-            throw CreateException($"Received invalid value for option {optionName}: {optionValue}");
+            throw new Exception($"Received invalid value for option {optionName}: {optionValue}");
         }
 
         internal static byte[] ConvertStringToBytes(string s)
@@ -266,6 +391,12 @@ namespace PortableIPC.Core
         {
             writer.Write((byte)(0xff & (v >> 8)));
             writer.Write((byte)(0xff & v));
+        }
+
+        internal static void WriteInt16BigEndian(byte[] rawBytes, int offset, short v)
+        {
+            rawBytes[offset] = (byte)(0xff & (v >> 8));
+            rawBytes[offset + 1] = (byte)(0xff & v);
         }
 
         internal static void WriteInt32BigEndian(BinaryWriter writer, int v)
