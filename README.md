@@ -123,21 +123,21 @@ var actual = new
 
 ## LogNavigator
 
-This module comprises the **LogNavigator** and **LogPositionHolder** classes. It is meant to automate some aspects of manual system testing by leveraging structured logging libraries.
+This module comprises the **LogNavigator** and **LogPositionHolder** classes. It is meant to automate some aspects of manual system testing by leveraging logging libraries.
 
 Till date, in spite of the noteworthy computer science advances, when all else fails to discover the cause of a bug, the last resort is "to insert a log statement" and rerun the program. Why then don't we take this a step further, and build a white box system testing philosophy on top of it? 
 
 That is what *LogNavigator* module is meant for, to demonstrate and promote a white box system testing philosophy based on logging. This approach to testing should practically solve the problem of testing a codebase not designed for automated testability. To do this, 
 
-   1. The software logging system should be configured to save these logging statements in a database (seen by most logging libraries as an appender or sink).
-   1. The software system should be configurable enough to detach the database appender or sink during runtime, when testing is not being done; and to re-attach when testing has to be done. A configuration value indicating whether or not "test log generation" is enabled should be available to code emitting such logs, so as to skip unnecessary emissions.
-   1. Logging system or library must always write logs in order (ie first in first out policy). 
-   1. Optionally the logging system should be configurable to require immediate saving of test logs (possibly blocking a thread) or allow async test logging. It may be of help depending on testing context.
+   1. The software logging system should be configured to save these logging statements in a database (seen by most logging libraries as an appender or sink or target).
+   1. The software system should be configurable enough to detach the database appender during runtime when testing is not being done; to re-attach when test logs have to be gathered; and to determine the existence of such "test only" appender for code emitting test logs, so as to skip unnecessary emissions.
+   1. Logging system or library must always write logs in order (i.e. first in first out policy).
+   1. Optionally the logging system should be configurable to support both immediate and async saving of test logs. It may be of help depending on testing context.
    1. The programmer has to insert logging statements meant for test cases, and with **log position identification** and **embedded structured logs**.
-   
+
        1. Every test log section should have a UUID/GUID in it to identify it to future maintainers of the software. By so doing, every log at runtime can be traced to the source code point responsible.
      
-       1. It should be possible to serialize test data to the underlying database  appender or sink for deserialization and use by test cases. Structured logging libraries like *SLF4J 2.0.0* and *Serilog* provide almost all that is need to embed serialized test data in a database. All that should be left for software developer is to configure the system to saving data from a particular key in a log event. 
+       1. It should be possible to serialize test data to the underlying database appender as key value pairs, for deserialization and use by test cases.
    
 So for example, supposing we wanted to test linear search in Java (this example is contrived for illustration purposes, but is very practical for testing in the midst of information hiding design practices, multithreading, single thread concurrency, graphical user interface, database access, and "out-of-band" background processing).
 
@@ -146,7 +146,7 @@ public int linearSearch(List<String> items, String searchItem) {
     for (int i = 0; i < items.size(); i++) {
         if (searchItem.equals(items.get(i))) {
             return i;        
-        }    
+        }
     }
     return -1;
 }
@@ -173,7 +173,7 @@ public Object[][] createTestLinearSearchData() {
 }
 ```
 
-Using **LogNavigation** with a library like *SLF4J*, one can alternatively write test code, first by modifying linearSearch with logging statements to obtain something like this:
+Using **LogNavigation** with a library like *SLF4J 2.0.0*, one can alternatively write test code, first by modifying linearSearch with logging statements to obtain something like this:
 
 ```java
 public int linearSearch(List<String> items, String searchItem) {
