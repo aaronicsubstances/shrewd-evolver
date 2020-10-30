@@ -130,7 +130,8 @@ Till date, in spite of the noteworthy computer science advances, when all else f
 That is what *LogNavigator* module is meant for, to demonstrate and promote a white box system testing philosophy based on logging. This approach to testing should practically solve the problem of testing a codebase not designed for automated testability. To do this, 
 
    1. The software logging system should be configured to save these logging statements in a database (seen by most logging libraries as an appender or sink or target).
-   1. The software system should be configurable enough to detach the database appender during runtime when testing is not being done; to re-attach when test logs have to be gathered; and to determine the existence of such "test only" appender for code emitting test logs, so as to skip unnecessary emissions.
+   1. The software system should be configurable enough to detach the database appender during runtime when testing is not being done, and to re-attach when test logs have to be gathered.
+   1. There must be a logger dedicated to test log appender whose level is binary. That level can be used at runtime to skip unnecessary emissions. Ideally, test log appender should receive only test logs.
    1. Logging system or library must always write logs in order (i.e. first in first out policy).
    1. Optionally the logging system should be configurable to support both immediate and async saving of test logs. It may be of help depending on testing context.
    1. The programmer has to insert logging statements meant for test cases, and with **log position identification** and **embedded structured logs**.
