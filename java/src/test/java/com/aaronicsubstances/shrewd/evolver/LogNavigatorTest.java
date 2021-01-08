@@ -8,15 +8,14 @@ import org.testng.annotations.Test;
 
 public class LogNavigatorTest {
     
-    static class LogPositionHolderImpl implements LogPositionHolder {
+    static class LogPositionHolderImpl {
         private final String positionId;
     
         public LogPositionHolderImpl(String positionId) {
             this.positionId = positionId;
         }
     
-        @Override
-        public String loadPositionId() {
+        public String getPositionId() {
             return positionId;
         }
     }
@@ -54,23 +53,23 @@ public class LogNavigatorTest {
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
-        assertEquals(instance.next(Arrays.asList("d")), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "d"), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
-        assertEquals(instance.next(Arrays.asList("c", "b")), testLogs.get(1));
+        assertEquals(instance.next(x -> Arrays.asList("c", "b").contains(x.getPositionId())), testLogs.get(1));
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 2);
-        assertEquals(instance.next(Arrays.asList("c")), testLogs.get(2));
+        assertEquals(instance.next(x -> x.getPositionId() == "c"), testLogs.get(2));
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 3);
-        assertEquals(instance.next(Arrays.asList("a")), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "a"), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 3);
-        assertEquals(instance.next(Arrays.asList("c")), testLogs.get(3));
+        assertEquals(instance.next(x -> x.getPositionId() == "c"), testLogs.get(3));
         
         assertEquals(instance.hasNext(), false);
         assertEquals(instance.nextIndex(), 4);
@@ -85,31 +84,31 @@ public class LogNavigatorTest {
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
-        assertEquals(instance.next(Arrays.asList("d"), null), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "d", null), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 0);
-        assertEquals(instance.next(Arrays.asList("a"), Arrays.asList("b")), testLogs.get(0));
+        assertEquals(instance.next(x -> x.getPositionId() == "a", x -> x.getPositionId() == "b"), testLogs.get(0));
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 1);
-        assertEquals(instance.next(Arrays.asList("c"), Arrays.asList("b")), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "c", x -> x.getPositionId() == "b"), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 1);
-        assertEquals(instance.next(Arrays.asList("b"), Arrays.asList("b")), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "b", x -> x.getPositionId() == "b"), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 1);
-        assertEquals(instance.next(Arrays.asList("b"), Arrays.asList("c")), testLogs.get(1));
+        assertEquals(instance.next(x -> x.getPositionId() == "b", x -> x.getPositionId() == "c"), testLogs.get(1));
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 2);
-        assertEquals(instance.next(Arrays.asList("c"), Arrays.asList("c")), null);
+        assertEquals(instance.next(x -> x.getPositionId() == "c", x -> x.getPositionId() == "c"), null);
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 2);
-        assertEquals(instance.next(Arrays.asList("c"), null), testLogs.get(2));
+        assertEquals(instance.next(x -> x.getPositionId() == "c", null), testLogs.get(2));
         
         assertEquals(instance.hasNext(), true);
         assertEquals(instance.nextIndex(), 3);

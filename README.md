@@ -123,7 +123,7 @@ var actual = new
 
 ## LogNavigator
 
-This module comprises the **LogNavigator** and **LogPositionHolder** classes. It is meant to automate some aspects of manual system testing by leveraging logging libraries.
+This module comprises the **LogNavigator** class. It is meant to automate some aspects of manual system testing by leveraging logging libraries.
 
 Till date, in spite of the noteworthy computer science advances, when all else fails to discover the cause of a bug, the last resort is "to insert a log statement" and rerun the program. Why then don't we take this a step further, and build a white box system testing philosophy on top of it? 
 
@@ -134,11 +134,7 @@ That is what *LogNavigator* module is meant for, to demonstrate and promote a wh
    1. There must be a logger dedicated to test log appender whose level is binary. That level can be used at runtime to skip unnecessary emissions. Ideally, test log appender should receive only test logs.
    1. Logging system or library must always write logs in order (i.e. first in first out policy).
    1. Optionally the logging system should be configurable to support both immediate and async saving of test logs. It may be of help depending on testing context.
-   1. The programmer has to insert logging statements meant for test cases, and with **log position identification** and **embedded structured logs**.
-
-       1. Every test log section should have a UUID/GUID in it to identify it to future maintainers of the software. By so doing, every log at runtime can be traced to the source code point responsible.
-     
-       1. It should be possible to serialize test data to the underlying database appender as key value pairs, for deserialization and use by test cases.
+   1. The programmer has to insert logging statements meant for test cases with **properties or key-value pairs attached**. It should be possible to serialize test data to the underlying database appender as key value pairs, for deserialization and use by test cases.
    
 So for example, supposing we wanted to test linear search in Java (this example is contrived for illustration purposes, but is very practical for testing in the midst of information hiding design practices, multithreading, single thread concurrency, graphical user interface, database access, and "out-of-band" background processing).
 
@@ -206,14 +202,9 @@ public int linearSearch(List<String> items, String searchItem) {
 Then white box based system testing will look like this:
 
 ```java
-static class MyLogRecord implements LogPositionHolder {
+static class MyLogRecord {
     public String positionId;
     public Integer indexValue;
-    
-    @Override
-    public String loadPositionId() {
-        return positionId;    
-    }
 }
 
 static class TestDB {
@@ -248,8 +239,8 @@ public void testLinearSearch1() {
     List<MyLogRecord> logs = TestDB.load();
     LogNavigator<MyLogRecord> logNavigator = new LogNavigator<>(logs);
     assertNotNull(getPositionId(logNavigator.next(
-        Arrays.asList("5d06d267-afce-4c8b-801f-f5a516c66774"))));
-    MyLogRecord last = logNavigator.next(Arrays.asList("1fc11a08-b85f-45dc-9f2c-579aa6c1cc12"));
+        x -> x.positionId == "5d06d267-afce-4c8b-801f-f5a516c66774")));
+    MyLogRecord last = logNavigator.next(x -> x.positionId == "1fc11a08-b85f-45dc-9f2c-579aa6c1cc12");
     assertFalse(logNavigator.hasNext());
     assertEquals(last.indexValue, expected);
 }
@@ -260,8 +251,8 @@ public void testLinearSearch2(List<String> items, String searchItem, int expecte
     List<MyLogRecord> logs = TestDB.load();
     LogNavigator<MyLogRecord> logNavigator = new LogNavigator<>(logs);
     assertNotNull(getPositionId(logNavigator.next(
-        Arrays.asList("5d06d267-afce-4c8b-801f-f5a516c66774"))));
-    MyLogRecord last = logNavigator.next(Arrays.asList("022d478c-e3ae-4faa-bd7f-67e5b6aa3c7e"));
+        x -> x.positionId == "5d06d267-afce-4c8b-801f-f5a516c66774")));
+    MyLogRecord last = logNavigator.next(x -> x.positionId == "022d478c-e3ae-4faa-bd7f-67e5b6aa3c7e");
     assertFalse(logNavigator.hasNext());
     assertEquals(last.indexValue, expected);
 }
@@ -284,14 +275,14 @@ public void testLinearSearch3() {
     List<MyLogRecord> logs = TestDB.load();
     LogNavigator<MyLogRecord> logNavigator = new LogNavigator<>(logs);
     assertNotNull(getPositionId(logNavigator.next(
-        Arrays.asList("5d06d267-afce-4c8b-801f-f5a516c66774"))));
+        x -> x.positionId == "5d06d267-afce-4c8b-801f-f5a516c66774")));
     for (int i = 0; i < 1; i++) {
         assertTrue(logNavigator.hasNext());
         MyLogRecord next = logNavigator.next();
         assertEquals(next.positionId, "7e0c9e2c-8fb1-4695-b6ad-b94a1c70f96f");
         assertEquals(next.indexValue, i + 1);
     }
-    MyLogRecord last = logNavigator.next(Arrays.asList("1fc11a08-b85f-45dc-9f2c-579aa6c1cc12"));
+    MyLogRecord last = logNavigator.next(x -> x.positionId == "1fc11a08-b85f-45dc-9f2c-579aa6c1cc12");
     assertFalse(logNavigator.hasNext());
     assertEquals(last.indexValue, expected);
 }

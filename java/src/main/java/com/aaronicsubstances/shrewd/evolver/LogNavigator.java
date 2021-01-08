@@ -2,8 +2,9 @@ package com.aaronicsubstances.shrewd.evolver;
 
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Predicate;
 
-public class LogNavigator<T extends LogPositionHolder> {
+public class LogNavigator<T> {
     private final List<T> logs;
     private int nextIndex = 0;
 
@@ -23,16 +24,16 @@ public class LogNavigator<T extends LogPositionHolder> {
         return logs.get(nextIndex++);
     }
     
-    public T next(List<String> searchIds) {
-        return next(searchIds, null);
+    public T next(Predicate<T> searchCondition) {
+        return next(searchCondition, null);
     }
     
-    public T next(List<String> searchIds, List<String> limitIds) {
-        Objects.requireNonNull(searchIds, "searchIds");
+    public T next(Predicate<T> searchCondition, Predicate<T> stopCondition) {
+        Objects.requireNonNull(searchCondition, "searchCondition");
         int stopIndex = logs.size();
-        if (limitIds != null) {
+        if (stopCondition != null) {
             for (int i = nextIndex; i < logs.size(); i++) {
-                if (limitIds.contains(logs.get(i).loadPositionId())) {
+                if (stopCondition.test(logs.get(i))) {
                     stopIndex = i;
                     break;
                 }
@@ -40,7 +41,7 @@ public class LogNavigator<T extends LogPositionHolder> {
         }
         for (int i = nextIndex; i < stopIndex; i++) {
             T log = logs.get(i);
-            if (searchIds.contains(log.loadPositionId())) {
+            if (searchCondition.test(log)) {
                 nextIndex = i + 1;
                 return log;
             }

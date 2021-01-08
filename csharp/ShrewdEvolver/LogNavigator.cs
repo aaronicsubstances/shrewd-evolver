@@ -4,7 +4,7 @@ using System.Text;
 
 namespace AaronicSubstances.ShrewdEvolver
 {
-    public class LogNavigator<T> where T : ILogPositionHolder
+    public class LogNavigator<T>
     {
         private readonly IList<T> _logs;
 
@@ -25,23 +25,23 @@ namespace AaronicSubstances.ShrewdEvolver
             return _logs[NextIndex++];
         }
 
-        public T Next(ICollection<string> searchIds)
+        public T Next(Predicate<T> searchCondition)
         {
-            return Next(searchIds, null);
+            return Next(searchCondition, null);
         }
 
-        public T Next(ICollection<string> searchIds, ICollection<string> limitIds)
+        public T Next(Predicate<T> searchCondition, Predicate<T> stopCondition)
         {
-            if (searchIds == null)
+            if (searchCondition == null)
             {
-                throw new ArgumentNullException(nameof(searchIds));
+                throw new ArgumentNullException(nameof(searchCondition));
             }
             int stopIndex = _logs.Count;
-            if (limitIds != null)
+            if (stopCondition != null)
             {
                 for (int i = NextIndex; i < _logs.Count; i++)
                 {
-                    if (limitIds.Contains(_logs[i].LoadPositionId()))
+                    if (stopCondition.Invoke(_logs[i]))
                     {
                         stopIndex = i;
                         break;
@@ -51,7 +51,7 @@ namespace AaronicSubstances.ShrewdEvolver
             for (int i = NextIndex; i < stopIndex; i++)
             {
                 T log = _logs[i];
-                if (searchIds.Contains(log.LoadPositionId()))
+                if (searchCondition.Invoke(log))
                 {
                     NextIndex = i + 1;
                     return log;

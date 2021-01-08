@@ -7,19 +7,14 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 {
     public class LogNavigatorTest
     {
-        class LogPositionHolderImpl: ILogPositionHolder
+        class LogPositionHolderImpl
         {
-            private readonly string _positionId;
-            
             public LogPositionHolderImpl(string positionId)
             {
-                _positionId = positionId;
+                PositionId = positionId;
             }
 
-            public string LoadPositionId()
-            {
-                return _positionId;
-            }
+            public string PositionId { get; }
         }
 
         [Fact]
@@ -66,23 +61,23 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
             Assert.True(instance.HasNext());
             Assert.Equal(0, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "d" }));
+            Assert.Null(instance.Next(x => x.PositionId == "d"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(0, instance.NextIndex);
-            Assert.Equal(testLogs[1], instance.Next(new List<string> { "c", "b" }));
+            Assert.Equal(testLogs[1], instance.Next(x => new List<string> { "c", "b" }.Contains(x.PositionId)));
 
             Assert.True(instance.HasNext());
             Assert.Equal(2, instance.NextIndex);
-            Assert.Equal(testLogs[2], instance.Next(new List<string> { "c" }));
+            Assert.Equal(testLogs[2], instance.Next(x => x.PositionId == "c"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(3, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "a" }));
+            Assert.Null(instance.Next(x => x.PositionId == "a"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(3, instance.NextIndex);
-            Assert.Equal(testLogs[3], instance.Next(new List<string> { "c" }));
+            Assert.Equal(testLogs[3], instance.Next(x => x.PositionId == "c"));
 
             Assert.False(instance.HasNext());
             Assert.Equal(4, instance.NextIndex);
@@ -102,31 +97,31 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
 
             Assert.True(instance.HasNext());
             Assert.Equal(0, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "d" }, null));
+            Assert.Null(instance.Next(x => x.PositionId == "d", null));
 
             Assert.True(instance.HasNext());
             Assert.Equal(0, instance.NextIndex);
-            Assert.Equal(testLogs[0], instance.Next(new List<string> { "a" }, new List<string> { "b" }));
+            Assert.Equal(testLogs[0], instance.Next(x => x.PositionId == "a", x => x.PositionId == "b"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(1, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "c" }, new List<string> { "b" }));
+            Assert.Null(instance.Next(x => x.PositionId == "c", x => x.PositionId == "b"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(1, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "b" }, new List<string> { "b" }));
+            Assert.Null(instance.Next(x => x.PositionId == "b", x => x.PositionId == "b"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(1, instance.NextIndex);
-            Assert.Equal(testLogs[1], instance.Next(new List<string> { "b" }, new List<string> { "c" }));
+            Assert.Equal(testLogs[1], instance.Next(x => x.PositionId == "b", x => x.PositionId == "c"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(2, instance.NextIndex);
-            Assert.Null(instance.Next(new List<string> { "c" }, new List<string> { "c" }));
+            Assert.Null(instance.Next(x => x.PositionId == "c", x => x.PositionId == "c"));
 
             Assert.True(instance.HasNext());
             Assert.Equal(2, instance.NextIndex);
-            Assert.Equal(testLogs[2], instance.Next(new List<string> { "c" }, null));
+            Assert.Equal(testLogs[2], instance.Next(x => x.PositionId == "c", null));
 
             Assert.True(instance.HasNext());
             Assert.Equal(3, instance.NextIndex);
