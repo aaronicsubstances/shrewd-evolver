@@ -12,7 +12,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
         [Fact]
         public void TestAddProperty()
         {
-            var instance = new CustomLogEvent();
+            var instance = new CustomLogEvent(GetType());
             Assert.Null(instance.Data);
 
             instance.AddProperty("age", 20);
@@ -32,7 +32,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
         [Fact]
         public void TestGenerateMessage()
         {
-            var instance = new CustomLogEvent();
+            var instance = new CustomLogEvent(GetType());
             dynamic properties = new ExpandoObject();
             instance.Data = properties;
             properties.person = new Dictionary<string, string>
@@ -50,7 +50,7 @@ namespace AaronicSubstances.ShrewdEvolver.UnitTests
         [MemberData(nameof(CreatTestGetTreeDataSliceData))]
         public void TestGetTreeDataSlice(object treeData, string path, object expected)
         {
-            var instance = new CustomLogEvent
+            var instance = new CustomLogEvent(null)
             {
                 Data = treeData
             };

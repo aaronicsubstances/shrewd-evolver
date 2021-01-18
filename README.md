@@ -306,7 +306,7 @@ For example, given the tree data structure below:
 the following code snippet demonstrates use of the class to fetch parts of the tree data structure above to generate a log message:
 
 ```cs
-var instance = new CustomLogEvent();
+var instance = new CustomLogEvent(GetType());
 dynamic properties = new ExpandoObject();
 instance.Data = properties;
 properties.person = new Dictionary<string, string>

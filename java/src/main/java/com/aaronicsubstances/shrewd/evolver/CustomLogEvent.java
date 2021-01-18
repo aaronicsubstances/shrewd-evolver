@@ -21,21 +21,25 @@ public class CustomLogEvent {
     private List<Object> arguments;
     private Exception error;
     private Object data;
+	private String targetLogger;
     
-    public CustomLogEvent()
+    public CustomLogEvent(Class<?> targetLogger)
     {
-        this(null, null);
+        this(targetLogger, null, null);
     }
 
-    public CustomLogEvent(String message)
+    public CustomLogEvent(Class<?> targetLogger, String message)
     {
-        this(message, null);
+        this(targetLogger, message, null);
     }
 
-    public CustomLogEvent(String message, Exception error)
+    public CustomLogEvent(Class<?> targetLogger, String message, Exception error)
     {
         this.message = message;
         this.error = error;
+		if (targetLogger != null) {
+			this.targetLogger = targetLogger.getClass().getName();
+		}
     }
 
     public String getMessage() {
@@ -64,6 +68,13 @@ public class CustomLogEvent {
     }
     public void setData(Object data) {
         this.data = data;
+    }
+
+    public String getTargetLogger() {
+        return targetLogger;
+    }
+    public void setTargetLogger(String targetLogger) {
+        this.targetLogger = targetLogger;
     }
 
     public CustomLogEvent addProperty(String name, Object value) {
