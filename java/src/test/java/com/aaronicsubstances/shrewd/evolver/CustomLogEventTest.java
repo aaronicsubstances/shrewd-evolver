@@ -13,7 +13,7 @@ import static org.testng.Assert.*;
 public class CustomLogEventTest {
     
     public void testAddProperty() {
-        CustomLogEvent instance = new CustomLogEvent();
+        CustomLogEvent instance = new CustomLogEvent(getClass());
         assertEquals(instance.getData(), null);
 
         instance.addProperty("age", 20);
@@ -24,7 +24,7 @@ public class CustomLogEventTest {
     }
 
     public void testGenerateMessage() {
-        CustomLogEvent instance = new CustomLogEvent();
+        CustomLogEvent instance = new CustomLogEvent(getClass());
         instance.setData(toMap("person", toMap("name", "Kofi"),
             "age", "twenty"));
 
@@ -36,7 +36,7 @@ public class CustomLogEventTest {
     
     @Test(dataProvider = "creatTestGetTreeDataSliceData")
     public void testGetTreeDataSlice(Object treeData, String path, Object expected) {
-        CustomLogEvent instance = new CustomLogEvent();
+        CustomLogEvent instance = new CustomLogEvent(null);
         instance.setData(treeData);
         Object actual = instance.fetchDataSlice(path);
         assertEquals(actual, expected);
