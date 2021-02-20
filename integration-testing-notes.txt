@@ -1,0 +1,19 @@
+https://stackoverflow.com/questions/20711300/controlling-execution-order-of-unit-tests-in-visual-studio
+
+order by test name: 
+use partial classes with ITC_AAE_ prefix, AAE, AAJ, AAO, AAT, AAY up to ZZY for 3000+ test classes increase in steps of 5
+use Test_AAA_0000_ prefix, 0000 to 9990 increase in steps of 10 for 1000 test cases per class
+let declarations be sorted
+
+create skip exception and wrapper method for test cases
+
+
+add tree data matcher and anonymous types (better than FluentAssertions which requires class libraries)
+add last edited comment to tree data matcher
+
+provide simple facade over httpclient, like js fetch, python requests
+
+store temporary state with service locator pattern and per assembly or per class hooks/scopes.
+use constructor/dispose pattern to create global and local variable context
+
+https://www.meziantou.net/mstest-v2-test-lifecycle-attributes.htm
