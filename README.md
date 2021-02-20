@@ -288,36 +288,3 @@ public void testLinearSearch3() {
 }
 
 ```
-
-## CustomLogEvent
-
-This module comprises **CustomLogEvent** class. Its main goal is to encourage the generation of structured logs without the need for a structured logging library.
-
-For example, given the tree data structure below:
-```json
-{
-    "person": {
-        "name": "Kofi"
-    },
-    "age": "twenty"
-}
-```
-
-the following code snippet demonstrates use of the class to fetch parts of the tree data structure above to generate a log message:
-
-```cs
-var instance = new CustomLogEvent(GetType());
-dynamic properties = new ExpandoObject();
-instance.Data = properties;
-properties.person = new Dictionary<string, string>
-{
-    { "name", "Kofi" }
-};
-properties.age = "twenty";
-
-instance.GenerateMessage((j, s) => $"{j($"person/name")} is " +
-    $"{s($"age")} years old.");
-Assert.Equal("\"Kofi\" is twenty years old.", instance.Message);
-```
-
-*NB: The j() function serializes its argument as JSON; the s() function calls ToString().*
