@@ -1,0 +1,18 @@
+# Guaranteed Child Process Destruction
+Windows - solved with .NET job objects, Go window object library, or pywin32
+*nix - solved with Go, or with python-prctl package which requires installation of native libraries
+
+# Process Group Facade
+-Will need to receive the standard output/error of all child processes into its standard output/error.
+-Will need to duplicate its standard input to the standard input of all child processes? Probably not needed
+-Will need to forward signals received to all child processes? Probably needed only for Ctrl-C and SIGTERM.
+-Will need to forward command line arguments to all child processes.
+-Fortunately, environment variables are automatically inherited by child processes
+-Will need means of providing configuration for starting each of the child processes
+ - specifying command to run and its arguments (find a way to merge with that of process group facade).
+ - specifying working directory
+-Will have to fail to start if one of the processes is not able to start.
+-Will have to stop if one of the processes stops abruptly.
+
+-can develop executable using .NET for Windows, and Go for *nix, and provide download link. and use standard format JSON for configuration
+-can provide libraries for flexibility in specifying configuration, such as convenience in specifying duplicate values.
