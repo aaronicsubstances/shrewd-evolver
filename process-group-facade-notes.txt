@@ -16,3 +16,6 @@ Windows - solved with .NET job objects, Go window object library, or pywin32
 
 -can develop executable using .NET for Windows, and Go for *nix, and provide download link. and use standard format JSON for configuration
 -can provide libraries for flexibility in specifying configuration, such as convenience in specifying duplicate values.
+
+*Will need a way for system administrators to get memory usage and other process stats for entire process group.
+Apache/Nginx have a similar problem, so their solution should work here too.
