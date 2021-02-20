@@ -1,7 +1,8 @@
 https://stackoverflow.com/questions/20711300/controlling-execution-order-of-unit-tests-in-visual-studio
 
 order by test name: 
-use partial classes with ITC_AAE_ prefix, AAE, AAJ, AAO, AAT, AAY up to ZZY for 3000+ test classes increase in steps of 5
+use partial classes with ITC_AAE_ prefix, AAE, AAJ, AAO, AAT, AAY up to ZZY for 3000+ test classes
+increase in steps of 5
 use Test_AAA_0000_ prefix, 0000 to 9990 increase in steps of 10 for 1000 test cases per class
 let declarations be sorted
 
@@ -18,5 +19,15 @@ use constructor/dispose pattern to create global and local variable context
 
 https://www.meziantou.net/mstest-v2-test-lifecycle-attributes.htm
 
-*Will need to start service under test in a known database state. Ensure it is running and started successfully before running tests. And also stop the service after test is run. And not have left over processes disturbing any restarts (e.g. port already in use). 
--This need is simplified if service start and stop can be done outside of integration testing. Conveniently eliminates all these issues with left over effects and having to know what command line arguments and environment variables to use, etc.
+*Will need to start service under test in a known database state. Ensure it is running
+and started successfully before running tests. And also stop the service after test is run. 
+And not have left over processes disturbing any restarts (e.g. port already in use). 
+-This need is simplified if service start and stop can be done outside of integration testing. 
+Conveniently eliminates all these issues with left over effects and having to know what command line arguments and environment variables to use, etc.
+-Example is to use OS containers and CI builds.
+
+
+*Can make use http reverse proxies if service under test is http based, to route any outgoing http requests made by the service
+back to the integration test currently executing. That conveniently gives us the power to return anything,
+or fail if we are not expecting that API call or received it in the wrong order. By this, we have the option
+to skip running against a dependent http service whose responses are simple to simulate.
