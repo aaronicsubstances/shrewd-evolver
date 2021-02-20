@@ -17,3 +17,6 @@ store temporary state with service locator pattern and per assembly or per class
 use constructor/dispose pattern to create global and local variable context
 
 https://www.meziantou.net/mstest-v2-test-lifecycle-attributes.htm
+
+*Will need to start service under test in a known database state. Ensure it is running and started successfully before running tests. And also stop the service after test is run. And not have left over processes disturbing any restarts (e.g. port already in use). 
+-This need is simplified if service start and stop can be done outside of integration testing. Conveniently eliminates all these issues with left over effects and having to know what command line arguments and environment variables to use, etc.
