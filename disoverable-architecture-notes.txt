@@ -10,3 +10,11 @@ GREAT! Let discoverable database schema take the form of tests on database. Hope
 
 -Log network connections and run checks and tests on them to assert some architectural constraints on which subsystems can talk to who.
 -Also useful could be discovering subsystem connectivity or network from network connection log
+
+Will need to use Wireshark for such discovery. As such subsystem network communication must use well known network protocols
+As such, need communication patterns with these characteristics:
+ - every subsystem needs to be identified by a socket address - IP and TCP/UDP port
+ - HTTP or look-alike (based on multiplexed TCP or UDP) for synchronous communications (aka "www for computer agents").
+ - SMTP/IMAP or look-alike (based on multiplexed TCP or UDP) for asynchronous communication (aka "email for computer agents").
+ - DNS and LDAP for domain name translation and other directory services
+ - Proxies and protocol translators for above mentioned protocols at application layer as needed.
