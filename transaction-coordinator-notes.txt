@@ -4,26 +4,17 @@ needed by microservices and process group facade for
  - local and distributed ACID transactions
  - using ORM with caching over a single database
  - controlling access controls in scenario in which every subsystem is assigned tables it can write to, and can read from in a single database.
- - communication among subsystems involving 3 or more. Here transaction coordinator provides the benefit of enforcing subystem boundaries.
-   an endpoint can easily ensure that only particular subsystems can call it.
+ - communication among subsystems involving 3 or more. Here transaction coordinator provides the benefit of enforcing subsystem boundaries.
+   (an endpoint can easily ensure that only particular subsystems can call it).
  - could host the GUI for desktop applications
 
 focus on database and subsystem communication. however the term "transaction" applies outside of ACID transactions to mean more of batching multiple operations together.
 
 requires some controls if microservices are being managed by potentially hostile development teams.
 
-In general, subsystem calls transaction coordinator to carry out functionality given functionality id - provides request body, and receives response. uses api based on http for example (later could use scalable ipc). 
+In general, subsystem calls transaction coordinator to carry out functionality given functionality id
+- provides request body, and receives response.
+- uses api based on http for example (later could use scalable ipc).
 Transaction coordinator then has a chance to verify that calling subystem has the right to invoke funtionality id, before allowing it to proceed.
 Some transactions may require transaction coordinator to call other subsystems to retrieve some information or perform some action, so in that 
 case the subsystem must expose an endpoint to receive such calls.
-
-May require dynamically typed code (e.g. SQL) to be sent over network to transaction coordinator.
-In general transaction coordinator saves code with an id (e.g. if using ORM), and then subsystems just invoke it using id and required parameters.
-
-E.g. Scenario: every subsystem is assigned tables it can write to, and can read from.
-Case 1: Raw sql is used, and there are no controls:
- then we trust subsystem to make sql calls directly to DB, if that sql involves only its tables. Then for sql involving others, it calls the transaction coordinator, which will just run it.
-Case 2: Raw sql is used, and there are controls:
- then we can't trust subsystem to be sending raw sql queries. Instead all such queries and code performing transactions should be saved at the transaction coordinator side.
-Case 3: Using ORM,
- then only option is to write the code to run at the transaction coordinator side, and call it via id, whether or not it involves other subsystems.
