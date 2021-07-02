@@ -129,12 +129,12 @@ Till date, in spite of the noteworthy computer science advances, when all else f
 
 That is what *LogNavigator* module is meant for, to demonstrate and promote a white box system testing philosophy based on logging. This approach to testing should practically solve the problem of testing a codebase not designed for automated testability. To do this, 
 
-   1. The software logging system should be configured to save these logging statements in a database (seen by most logging libraries as an appender or sink or target).
-   1. The software system should be configurable enough to detach the database appender during runtime when testing is not being done, and to re-attach when test logs have to be gathered.
-   1. There must be a logger dedicated to test log appender whose level is binary. That level can be used at runtime to skip unnecessary emissions. Ideally, test log appender should receive only test logs.
-   1. Logging system or library must always write logs in order (i.e. first in first out policy).
+   1. The logging system should be configured to save logging statements in a database (seen by most logging libraries as an appender or sink or target).
+   1. The logging system should be configurable enough to detach the database appender during runtime when testing is not being done, and to re-attach when test logs have to be gathered.
+   1. The logging system should be configurable enough to allow only logs of the application below a particular log level to pass through to database. In particular, it should be possible to disable low level logging output from external libraries and dependencies employed by application. An example is to configure logging system to disable trace and debug logs, except for logs from loggers with names prefixed with namespace of application.
+   1. Logging system must always write logs in order (i.e. first in first out policy).
+   1. The programmer has to insert logging statements meant for test cases as **machine readable strings**. E.g. CSV, JSON. Some logging libraries suggest use of properties, key-value pairs or structured logs. But this testing strategy suggests a different approach, in which all logs must eventually be self-contained strings. It is then up to the programmer to load the strings from the database which are both parseable and applicable to his/her test cases.
    1. Optionally the logging system should be configurable to support both immediate and async saving of test logs. It may be of help depending on testing context.
-   1. The programmer has to insert logging statements meant for test cases with **properties or key-value pairs attached**. It should be possible to serialize test data to the underlying database appender as key value pairs, for deserialization and use by test cases.
    
 So for example, supposing we wanted to test linear search in Java (this example is contrived for illustration purposes, but is very practical for testing in the midst of information hiding design practices, multithreading, single thread concurrency, graphical user interface, database access, and "out-of-band" background processing).
 
@@ -170,31 +170,27 @@ public Object[][] createTestLinearSearchData() {
 }
 ```
 
-Using **LogNavigation** with a library like *SLF4J 2.0.0*, one can alternatively write test code, first by modifying linearSearch with logging statements to obtain something like this:
+Using **LogNavigation** with Java's in-built java.util.logging package for example, one can alternatively write test code, first by modifying linearSearch with logging statements to obtain something like this:
 
 ```java
 public int linearSearch(List<String> items, String searchItem) {
-    logger.atDebug()
-        .addKeyValue("positionId", "5d06d267-afce-4c8b-801f-f5a516c66774")
-        .log("Linear search started.");
+    logger.debug("positionId,5d06d267-afce-4c8b-801f-f5a516c66774\n" +
+        "message,Linear search started.");
     for (int i = 0; i < items.size(); i++) {
         if (searchItem.equals(items.get(i))) {
-            logger.atDebug()
-                .addKeyValue("positionId", "022d478c-e3ae-4faa-bd7f-67e5b6aa3c7e")
-                .addArgument(i)
-                .log("Search item found at: {}");
-            return i;        
+            logger.debug("positionId,022d478c-e3ae-4faa-bd7f-67e5b6aa3c7e\n" +
+                "indexValue," + i + "\n" +
+                "message,Search item found");
+            return i;
         }
-        logger.atDebug()
-            .addKeyValue("positionId", "7e0c9e2c-8fb1-4695-b6ad-b94a1c70f96f")
-            .addArgument(i + 1)
-            .log("Search item not found after {} iteration(s).");
+        logger.debug("positionId,7e0c9e2c-8fb1-4695-b6ad-b94a1c70f96f\n" +
+            "indexValue," + (i + 1) + "\n" +
+            "message,Search item not found after another iteration.");
     }
         
-    logger.atDebug()
-        .addKeyValue("positionId", "1fc11a08-b85f-45dc-9f2c-579aa6c1cc12")
-        .addArgument(-1)
-        .log("Search item not found. Returning {}.");
+    logger.debug("positionId,1fc11a08-b85f-45dc-9f2c-579aa6c1cc12\n" +
+        "indexValue," + (-1) + "\n" +
+        "message,Search item not found. Returning...");
     return -1;
 }
 ```
@@ -205,6 +201,7 @@ Then white box based system testing will look like this:
 static class MyLogRecord {
     public String positionId;
     public Integer indexValue;
+    public String message;
 }
 
 static class TestDB {
@@ -213,7 +210,7 @@ static class TestDB {
     }
     
     public static List<MyLogRecord> load() {
-        throw new UnsupportedOperationException("Implement loading of logs to be navigated");
+        throw new UnsupportedOperationException("Implement loading and parsing of CSV-formatted logs to be navigated");
     }
 }
     
@@ -288,3 +285,11 @@ public void testLinearSearch3() {
 }
 
 ```
+
+## CustomLoggerFacade
+
+The classes in the logging subdirectory of the csharp and java projects are meant for use during library creation, to abstract away any logging library which will eventually be used by library consumers.
+
+At a point during application start up, CustomLoggerFacade has to be supplied with a function that creates CustomLogger instances. 
+
+Inside library, call CustomLoggerFacade.getLogger() and supply calling class name or class/type instance. And then invoke the methods of the CustomLogger returned. By default the logger returned from CustomLoggerFacade does nothing.

@@ -1,4 +1,5 @@
-﻿using Microsoft.CodeAnalysis;
+﻿// version: 1.0.0
+using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using System;
