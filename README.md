@@ -293,3 +293,7 @@ The classes in the logging subdirectory of the csharp and java projects are mean
 At a point during application start up, CustomLoggerFacade has to be supplied with a function that creates CustomLogger instances. 
 
 Inside library, call CustomLoggerFacade.getLogger() and supply calling class name or class/type instance. And then invoke the methods of the CustomLogger returned. By default the logger returned from CustomLoggerFacade does nothing.
+
+## Polling
+
+The classes in the polling subdirectory of the csharp project are meant for performing actions at regular time intervals, within some overall time frame. Greatly inspired by the [Awaitility project] (https://github.com/awaitility/awaitility).
