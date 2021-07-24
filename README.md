@@ -288,12 +288,18 @@ public void testLinearSearch3() {
 
 ## CustomLoggerFacade
 
-The classes in the logging subdirectory of the csharp and java projects are meant for use during library creation, to abstract away any logging library which will eventually be used by library consumers.
+This module comprises the classes in the *logging* subdirectories of the language implementation directories. They are meant for use during library creation, to abstract away any logging library which will eventually be used by library consumers.
 
-At a point during application start up, CustomLoggerFacade has to be supplied with a function that creates CustomLogger instances. 
+At a point during application start up, **CustomLoggerFacade** has to be supplied with a function that creates **CustomLogger** instances. 
 
 Inside library, call CustomLoggerFacade.getLogger() and supply calling class name or class/type instance. And then invoke the methods of the CustomLogger returned. By default the logger returned from CustomLoggerFacade does nothing.
 
 ## Polling
 
-The classes in the polling subdirectory of the csharp project are meant for performing actions at regular time intervals, within some overall time frame. Greatly inspired by the [Awaitility project] (https://github.com/awaitility/awaitility).
+This module comprises the classes in the *polling* subdirectory of the language implementation directories. Greatly inspired by the [Awaitility project](https://github.com/awaitility/awaitility), they are meant for performing actions at regular time intervals, within some overall time limit.
+
+Main class is **PollingUtils** which supplies functions such as
+
+ - *PollAsync*. Basis of all other functions in this module. Takes a callback argument which is  invoked regularly at a specified interval, up to a specified overall time limit. Allows cancellation both from outside and inside callback.
+ - *AssertConditionFulfilmentAsync*. that a predicate condition is true for a specified overall time period. predicate will be evaluated at 1-second intervals. Useful during integration testing.
+ - *AwaitConditionFulfilmentAsync*. waits for a specified amount of time for a predicate condition to become true. predicate will be evaluated at 1-second interval. Useful during integration testing.
