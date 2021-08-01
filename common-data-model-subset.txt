@@ -39,3 +39,5 @@
   and have exactly one class name.
   - for implicit relationships, all of these properties are implicit. No explicit properties can be set.
 - each explicit relationships can have a different list of properties.
+- each property of a node or relationship must have the same type/class for all its values: 
+  JSON primitive (null, number, boolean, string) or JSON encoded string.
