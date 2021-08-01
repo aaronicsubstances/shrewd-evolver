@@ -1,0 +1,41 @@
+## Queries
+
+- Based on ReactiveExtensions
+  - filter, map, skip, take
+  - custom operator for (groupby + aggregate + map) combination
+  - custom operator for (partitionby + window function + map) combination
+  - filter operations based on acceptable operations in conditional clause, and SQL functions in JPQL 2.2
+  - Custom External Sorting operator required
+  - Custom External Distinct operator based on external sort required
+  - Custom operator for converting between trees and record list
+  - Custom operator based on reading saved query results
+  - Custom operator based on jpql subset - select ... where ... order by. no subqueries.
+    - implement in document db, sql, and graph db for loading trees or record lists with 
+      implicit parent-child relationships.
+  - Custom operator for loading targets of many to many relationships, given id, ie no jpql involved.
+    - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids 
+      whose targets are to be loaded
+- Need to be able to save query results to temp storage for subsequent use.
+
+## Writes
+
+- Need to insert, update and delete trees or record lists by ids and parent ids.
+ - automatically handle parent-child relationships.
+ - such relationships are always implicit, bidirectional one to many relationships.
+   i.e. many to many not supported here, and one to one has to be enforced in code.
+- Support explicit creating and deletion of relationships between trees or record lists.
+ - always treat such relationships as potentially many-to-many bidirectional relationships.
+- for document db, must maintain dictionary of ids to tree paths.
+- sql db and document db need join table/document to maintain many-to-many relationships.
+
+## Common Data Model Subset
+
+- Based on property graph model, but with some restrictions
+- each relationship is either implicit or explicit, and is undirected/bidirectional.
+- implicit relationships are always one to many, and cannot have any explicit properties.
+- each subtree and record must have an id, and exactly one class name (i.e. table name in sql).
+- each node (i.e. subtree or record) in a class can have a different list of properties.
+- each relationship must have an id, specify unordered pair of node ids, class of each node id, 
+  and have exactly one class name.
+  - for implicit relationships, all of these properties are implicit. No explicit properties can be set.
+- each explicit relationships can have a different list of properties.

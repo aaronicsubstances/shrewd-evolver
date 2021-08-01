@@ -4,7 +4,8 @@
 -constraints (the C in ACID). Defining primitives to use - pure functional expressions to apply to subset of records in all tables.
 -probably think of something like running checks and tests on database readonly view (snapshot isolation sort of)
 
-GREAT! Let discoverable database schema take the form of tests on database. Hopefully, because they are tests, future maintainers can read and understand.
+GREAT! Let discoverable database schema take the form of tests on database, probably random portions of it rather than all.
+Hopefully, because they are tests, future maintainers can read and understand.
 
 # Discoverable software architecture based on network connections
 
