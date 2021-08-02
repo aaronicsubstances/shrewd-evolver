@@ -1,12 +1,19 @@
 ## Queries
 
-- Based on ReactiveExtensions
-  - filter, map, skip, take
-  - custom operator for (groupby + aggregate + map) combination
-  - custom operator for (partitionby + window function + map) combination
+Based on ReactiveExtensions
+  - filter, map, skip, take, concat. NB: none of these operators affects ordering of input streams.
   - filter operations based on acceptable operations in conditional clause, and SQL functions in JPQL 2.2
-  - Custom External Sorting operator required
-  - Custom External Distinct operator based on external sort required
+  - custom operator for (groupby + aggregate + map) combination on sorted input stream.
+    - support treating entire input stream as a group.
+  - custom operator for (partitionby + window function + map) combination on sorted input stream.
+    - support treating entire input stream as a partition.
+  - No support for window aggregates. E.g. COUNT(*).
+    - Rather, use aggregates and save result set for subsequent use.
+  - custom operators for distinct, union all, union distinct, intersection all, intersection distinct,
+    difference all, difference distinct on sorted inputs.
+  - NB: above operators all work on infinite input streams.
+  - Custom External Sorting operator required.
+  - Custom External Distinct, Union, Intersection and Difference operators based on external sort.
   - Custom operator for converting between trees and record list
   - Custom operator based on reading saved query results
   - Custom operator based on jpql subset - select ... where ... order by. no subqueries.
@@ -15,7 +22,6 @@
   - Custom operator for loading targets of many to many relationships, given id, ie no jpql involved.
     - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids 
       whose targets are to be loaded
-- Need to be able to save query results to temp storage for subsequent use.
 
 ## Writes
 
@@ -35,8 +41,8 @@
 - implicit relationships are always one to many, and cannot have any explicit properties.
 - each subtree and record must have an id, and exactly one class name (i.e. table name in sql).
 - each node (i.e. subtree or record) in a class can have a different list of properties.
-- each relationship must have an id, specify unordered pair of node ids, class of each node id, 
-  and have exactly one class name.
+- each relationship must have an id, specify unordered pair of node ids, and have exactly one class name 
+  - class name should have a guid suffix to make it unique.
   - for implicit relationships, all of these properties are implicit. No explicit properties can be set.
 - each explicit relationships can have a different list of properties.
 - each property of a node or relationship must have the same type/class for all its values: 
