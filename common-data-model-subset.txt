@@ -7,7 +7,8 @@ Based on ReactiveExtensions
     - support treating entire input stream as a group.
   - custom operator for (partitionby + window function + map) combination on sorted input stream.
     - support treating entire input stream as a partition.
-  - No support for window aggregates. E.g. COUNT(*).
+    - support use of buffer, sentinels and selectmany operators, to implement window frames with moving aggregates.
+  - No support for window aggregates on entire partition. E.g. COUNT(*).
     - Rather, use aggregates and save result set for subsequent use.
   - custom operators for distinct, union all, union distinct, intersection all, intersection distinct,
     difference all, difference distinct on sorted inputs.
