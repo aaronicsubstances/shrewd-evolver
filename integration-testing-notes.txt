@@ -30,3 +30,5 @@ Conveniently eliminates all these issues with left over effects and having to kn
 back to the integration test currently executing. That conveniently gives us the power to return anything,
 or fail if we are not expecting that API call or received it in the wrong order. By this, we have the option
 to skip running against a dependent http service whose responses are simple to simulate.
+
+*Can make use of desktop screen for automated ui tests with AutoHotkey on Windows.
