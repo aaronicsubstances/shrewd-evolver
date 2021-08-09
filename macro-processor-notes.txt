@@ -1,0 +1,3 @@
+Refers to macro processor role in enhancing software maintenance
+Code augmentor can be seen as a macro processor.
+Linters can be seen as macro processors whose ouput equals the input.
