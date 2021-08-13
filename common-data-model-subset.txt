@@ -1,6 +1,6 @@
 ## Queries
 
-Based on ReactiveExtensions
+Based on ReactiveExtensions and greatly inspired by https://github.com/morelinq/MoreLINQ
   - filter, map, skip, take, concat. NB: none of these operators affects ordering of input streams.
   - filter operations based on acceptable operations in conditional clause, and SQL functions in JPQL 2.2
   - custom operator for (groupby + aggregate + map) combination on sorted input stream.
