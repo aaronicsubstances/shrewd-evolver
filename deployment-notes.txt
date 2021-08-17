@@ -1,0 +1,57 @@
+# deployment
+
+Software management tasks applicable to OS, shrinkwrap apps, and bespoke apps
+-deploy/install and undeploy/uninstall
+-start/open and stop/close
+-upgrades
+-metrics and logs monitoring
+-testing
+-defining background services on startup and cron (task scheduler on windows) jobs
+ -http, ftp, smtp, ssh, ntp
+-using apps, e.g. remote desktop, ssh, creating folders and files, creating sql tables, 
+ running bulk sql inserts, executing bash scripts, compressing logs, downloading files,
+ sending emails
+
+Hardware Management Tasks
+-Disk backup
+-Disk cleanup
+-Power backup
+-Hardware upgrades
+-Network configuration
+-prevent clock drift with NTP
+-GPU configuration for CPU-bound tasks?
+
+Security Tasks
+-User management and authorization
+-TLS certificate management
+-Firewall configuration
+-testing for security vulnerabilities
+-Antivirus
+
+Automation needed for
+-continuous integration
+-automatic deployment and launch
+-monitoring several apps
+-managing different instances of an app
+-availability (and horizontal scalability which can be seen as one possible solution to availability)
+
+## big ideas for small scale server management
+
+-ultimately employ commercial solutions like SolarWinds, HAProxy Enterprise, Nginx Plus, Kubernetes
+-until then employ semi-automated solutions.
+-avoid being taken hostage by server administrators (due to use of arcane server admin knowledge) by introducing 
+ -custom server admin panels
+ -automated operations with git hosted, ssh based custom script generator (this also helps with 
+ scaling down management tasks for small scale deployments)
+ -deployment to azure, aws and gcp so as to avoid vendor lock-in, and distribute cloud knowledge among
+ server admins
+-automate deployment (but not "continuous deployment") so that deployment assumes physical machine
+ and the existing operating system concepts of file system, multiprocessing and network concepts can continue to be used, by
+ -eschewing containers in favour of virtual machines until containers are standardized 
+ -creating user accounts per deployment while containers are yet to be standardized.
+-for availability, accept limitation that it can only be done via DNS (virtual domain) or ARP (virtual IP)
+ (http://tenereillo.com/GSLBPageOfShame.htm):
+ -for internal communications, use virtual domain with dns resolution (e.g. through pipe or remote backends of powerdns) 
+  and change each time ip changes
+ -for external communications, use virtual ip on LAN with HAProxy
+-for horizontal scalability, make use of spare capacity and multiple ips per domain 
