@@ -1,3 +1,5 @@
 Refers to macro processor role in enhancing software maintenance
 Code augmentor can be seen as a macro processor.
 Linters can be seen as macro processors whose ouput equals the input.
+Port code-augmentor-core to csharp
+Expand code-augmentor-support to code-augmentor-core for python, php, nodejs, 
