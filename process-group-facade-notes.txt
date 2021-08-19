@@ -3,6 +3,7 @@ Windows - solved with .NET job objects, Go window object library, or pywin32
 *nix - solved with Go, or with python-prctl package which requires installation of native libraries
 
 # Process Group Facade
+*Mimick Ruby Foreman API.
 -Will need to receive the standard output/error of all child processes into its standard output/error.
 -Will need to duplicate its standard input to the standard input of all child processes? Probably not needed
 -Will need to forward signals received to all child processes? Probably needed only for Ctrl-C and SIGTERM.
