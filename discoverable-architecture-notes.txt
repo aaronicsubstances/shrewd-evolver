@@ -54,3 +54,31 @@ NodeJS - Effectively http.createServer(app). where app is the framework (e.g. Ex
  - Basically mimick http module. And then when http.createServer(app) is called,
  - our internal logic kicks in. Example: https://www.npmjs.com/package/node-fastcgi
 PHP - ReactPHP HTTP
+
+PseudoEmail
+------------
+Pub sub, Mini kafka, can support 4 types of Rx subjects
+3 parts: pubsubcore, external producer, external consumer
+
+external producer:
+A. generate topic (regular or compact)
+B. generate message (topic, msg id, value, key, deleted, date created)
+
+external consumer role: have an id?
+A. save topic, id? and offset to disk (for no more than once) or memory (for at least once)
+B. query with topic, offset and limit, boolean to include offset (msg id and date created combination as string). 
+use null offset to fetch messages from the beginning.
+C. query result is msg id, value, key, date created
+
+pubsubcore/msmq
+A. Clear regular topic messages with expiration timeout or storage capacity
+B. Compact messages by deletion. Can be done concurrently as long as deletions of tombstones are done 
+in transaction with latest version of corresponding message. Outdated message versions can always be
+deleted.
+
+Extra points
+A. Simple design based on polling. Poll as long as messages are present. Else sleep for configurable 1 minute.
+B. It is consumer's responsibility to suscribe/unsuscribe from msmq
+C. msmq notifies consumers to poll, rather than with data, unless notifications are not being saved, in 
+which case consumer does not care about previous or lost events.
+
