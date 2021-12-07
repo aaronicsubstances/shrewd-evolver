@@ -1,0 +1,25 @@
+## Model-Independent Query
+
+Based on ReactiveExtensions and greatly inspired by https://github.com/morelinq/MoreLINQ
+  - filter, map, skip, take, concat. NB: none of these operators affects ordering of input streams.
+  - filter operations based on acceptable operations in conditional clause, and SQL functions in JPQL 2.2
+  - custom operator for (groupby + aggregate + map) combination on sorted input stream.
+    - support treating entire input stream as a group.
+  - custom operator for (partitionby + window function + map) combination on sorted input stream.
+    - support treating entire input stream as a partition.
+    - support use of buffer, sentinels and selectmany operators, to implement window frames with moving aggregates.
+  - No support for window aggregates on entire partition. E.g. COUNT(*).
+    - Rather, use aggregates and save result set for subsequent use.
+  - custom operators for distinct, union all, union distinct, intersection all, intersection distinct,
+    difference all, difference distinct on sorted inputs.
+  - NB: above operators all work on infinite input streams.
+  - Custom External Sorting operator required. - https://www.sqlite.org/tempfiles.html#transient_indices
+  - Custom External Distinct, Union, Intersection and Difference operators based on external sort.
+  - Custom operator for converting between trees and record list
+  - Custom operator based on reading saved query results
+  - Custom operator based on jpql subset - select ... where ... order by. no subqueries.
+    - implement in document db, sql, and graph db for loading trees or record lists with 
+      implicit parent-child relationships.
+  - Custom operator for loading targets of many to many relationships, given id, ie no jpql involved.
+    - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids 
+      whose targets are to be loaded
