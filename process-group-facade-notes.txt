@@ -3,20 +3,22 @@ Windows - solved with .NET job objects, Go window object library, or pywin32
 *nix - solved with Go, or with python-prctl package which requires installation of native libraries
 
 # Process Group Facade
-*Mimick Ruby Foreman API.
--Will need to receive the standard output/error of all child processes into its standard output/error.
--Will need to duplicate its standard input to the standard input of all child processes? Probably not needed
+*Mimick Ruby Foreman API?
+-Fortunately the standard input/output/error can be configured to be inherited by all child processes.
+-Fortunately, environment variables are automatically inherited by child processes.
 -Will need to forward signals received to all child processes? Probably needed only for Ctrl-C and SIGTERM.
 -Will need to forward command line arguments to all child processes.
--Fortunately, environment variables are automatically inherited by child processes
 -Will need means of providing configuration for starting each of the child processes
  - specifying command to run and its arguments (find a way to merge with that of process group facade).
  - specifying working directory
--Will have to fail to start if one of the processes is not able to start.
+-Will have to fail to start if one of the processes is not able to start
+ e.g. by exiting and triggering aborting of already started child processes.
 -Will have to stop if one of the processes stops abruptly.
+ e.g. by using SIGCHLD on *nix or job objects child process exit notification on Windows
 
--can develop executable using .NET for Windows, and Go for *nix, and provide download link. and use standard format JSON for configuration
--can provide libraries for flexibility in specifying configuration, such as convenience in specifying duplicate values.
+-can develop executable using .NET for Windows, and Golang for *nix, and provide download link with sources
+-can make use of embedded resource which is either a configuration file in JSON,
+ or a script directive which generates such a configuration
 
 *Will need a way for system administrators to get memory usage and other process stats for entire process group.
 Apache/Nginx have a similar problem, so their solution should work here too.
