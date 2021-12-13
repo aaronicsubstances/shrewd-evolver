@@ -1,24 +1,26 @@
 # Guaranteed Child Process Destruction
-Windows - solved with .NET job objects, Go window object library, or pywin32
-*nix - solved with Go, or with python-prctl package which requires installation of native libraries
+Windows - solved with .NET job objects (JobObjectWrapper), Go window object library, or pywin32
+*nix - solved with Go, node-ffi (prctl function) or with python-prctl package which requires installation of native libraries
 
 # Process Group Facade
-*Mimick Ruby Foreman API?
+-Develop library using python (cross-platform), .NET for Windows, and Golang for *nix.
+-How executable embeds library and constructs child process configuration is up to library clients, since
+ in general file generation and copying, command line argument generation and renaming, will be
+ involved prior to child process creation.
+-Provide default Golang executable (with sources), which takes a JSON configuration file for starting child processes.
+ * Path to configuration file will be stored inside an embedded resource.
+-Library's main need is information for starting each of the child processes
+ - command to run and its list of arguments. Default is to use the same arguments used to start current process if obtainable.
+ - working directory. Default is to use current working directory.
+ - environment variables. Default is to let child processes inherit current process's environment variables.
 -Fortunately the standard input/output/error can be configured to be inherited by all child processes.
--Fortunately, environment variables are automatically inherited by child processes.
--Will need to forward signals received to all child processes? Probably needed only for Ctrl-C and SIGTERM.
--Will need to forward command line arguments to all child processes.
--Will need means of providing configuration for starting each of the child processes
- - specifying command to run and its arguments (find a way to merge with that of process group facade).
- - specifying working directory
+-Expose hook to forward signals received to all child processes? Probably needed only for Ctrl-C and SIGTERM.
 -Will have to fail to start if one of the processes is not able to start
- e.g. by exiting and triggering aborting of already started child processes.
--Will have to stop if one of the processes stops abruptly.
+ e.g. by signalling client to exit early and trigger aborting of already started child processes.
+-Will have to stop all processes if one of the processes stops abruptly.
  e.g. by using SIGCHLD on *nix or job objects child process exit notification on Windows
 
--can develop executable using .NET for Windows, and Golang for *nix, and provide download link with sources
--can make use of embedded resource which is either a configuration file in JSON,
- or a script directive which generates such a configuration
+*Mimick Ruby Foreman API?
 
 *Will need a way for system administrators to get memory usage and other process stats for entire process group.
 Apache/Nginx have a similar problem, so their solution should work here too.
