@@ -1,6 +1,7 @@
 # Guaranteed Child Process Destruction
 Windows - solved with .NET job objects (JobObjectWrapper), Go window object library, or pywin32
 *nix - solved with Go, node-ffi (prctl function) or with python-prctl package which requires installation of native libraries
+     - better solved with https://ahmet.im/blog/minimal-init-process-for-containers/
 
 # Process Group Facade
 -Develop library using python (cross-platform), .NET for Windows, and Golang for *nix.
