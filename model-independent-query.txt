@@ -1,6 +1,16 @@
 ## Model-Independent Query Support
 
-Implement function for converting between trees and record list
-Implement function for loading targets of many to many relationships, given id
+Assume use of SQLite, or Temporary Table mechanism supported by mainstream RDBMSes for model independent query support.
+However implement supporting code which makes it easy to import large datasets into temporary SQLite databases or temporary tables, and manages automatic
+deletion of such objects after some timeouts.
+One convenient function needed in this supporting code is dealing with expectation of schema by RDBMSes. In other words, what is needed is
+  - convenience of automatically identifiying column types (and even names) in result sets of queries
+  - creating temporary tables based on schema suggested by column types to store such query results
+  - loading data from such temporary tables into typed record list
+  - transforming data in such temporary tables and mapping the results into typed record list as query results or as data to store in main RDBMS tables.
+
+Implement function for converting between trees and record list so as to extend model-independent querying to non-RDBMSes.
+
+Implement function for loading targets of many to many relationships, given id, for non-RDBMSes.
  - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids 
    whose targets are to be loaded
