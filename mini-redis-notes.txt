@@ -1,0 +1,48 @@
+data types
+----------
+strings
+(numbers
+boolean
+null)
+lists
+sets
+sorted sets
+hashes
+
+*can support any number of operations specified by redis for each data type
+
+*treat as giant json, which can also allow for point values modelled as a list, to be backed by geospatial index.
+*block until available and pub/sub can be done with "streams", which in turn can be done by "mini-kafka".
+
+*treat commands in general as procedures specified in process, using http to represent input and output.
+hence no need to implement all redis commands, except to ensure that the underlying data model is a json tree, with supporting structures for
+ttl, help info, etc (like geospatial index in the future).
+
+generic commands
+----------------
+cas-like instruction - from memcached
+cache with ttl
+scan cache keys
+almost all
+
+json commands
+----------
+adopt dotted namespacing
+path parsing: https://redis.io/docs/stack/json/path/#jsonpath-syntax
+
+connection and server management
+-----------------
+bgsave
+echo
+flushdb
+command count
+command docs
+command info
+command list
+info
+lastsave
+memory purge
+memory stats
+memory usage
+ping
+time
