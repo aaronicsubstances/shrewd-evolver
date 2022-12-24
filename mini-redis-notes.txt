@@ -20,7 +20,6 @@ ttl, help info, etc (like geospatial index in the future).
 
 generic commands
 ----------------
-cas-like instruction - from memcached
 cache with ttl
 scan cache keys
 almost all
