@@ -1,0 +1,7 @@
+Support pattern of notification or cron calls code in loop, which keeps looping as long as it receives notifications  or cron trigger
+-check if already in progress, and if so, set condition to true and return
+-else start a do while loop
+-in start of do while loop set condition to false (unset)
+- work can then be done, if any work items are found, set condition to true
+- decide on how many work items to pick in one loop
+- decide on whether to advance db pointer before processing work items (at most once processing), or after processing the work items (at least once processing)
