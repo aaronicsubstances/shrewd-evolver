@@ -1,0 +1,5 @@
+Create an ORM-like abstraction for ERD of property-graph model  that supports abstraction of things like
+- ACID transactions 
+- SQL joins
+- GQL relationships
+- adding/deleting relation
