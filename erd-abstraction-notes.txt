@@ -3,3 +3,4 @@ Create an ORM-like abstraction for ERD of property-graph model  that supports ab
 - SQL joins
 - GQL relationships
 - adding/deleting relation
+*emulate https://github.com/querydsl/querydsl
