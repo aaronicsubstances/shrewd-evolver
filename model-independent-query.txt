@@ -16,6 +16,8 @@ Implementation
 -in sql, we can create regular or temporary tables directly from query results
 -in sqlite, we can leverage ephemeral file storage and dynamically-typed columns to have a template database file with precreated tables, which can be cloned and populated with query results.
 3. Implement function for converting between trees and record list so as to extend model-independent querying to non-RDBMSes.
+ - split into mapping record list into tuples of classes and using reactive extensions and morelinq to map tuples of classes to trees
+ - main job then is about getting orm-like functionality of automating mapping of database labels to program labels, esp in a static typing environment.
 4. Implement function for loading targets of many to many relationships, given id, for non-RDBMSes.
  - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids 
    whose targets are to be loaded. By have many to many table sorted by source ids, fetch target ids, and use WHERE id in (target ids)
