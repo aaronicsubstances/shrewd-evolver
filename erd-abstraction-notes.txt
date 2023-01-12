@@ -22,7 +22,7 @@ Develop best practices for working with ERD of property-graph model that support
  - only when SQL statement requires native features unsupported by particular SQL builder library AND is very dynamic, do we HAVE TO generate SQL
    without builders and also forego the ability to independently test.
 
-learn from the following before attempting to implement ORMs
+learn from the following before attempting to implement ORM-like features (like abstracting names of SQL table columns)
 - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
 - https://scala-slick.org/doc/3.0.0/orm-to-slick.html
 - https://rdo.devzest.com
