@@ -4,9 +4,14 @@ Create an ORM-like abstraction for ERD of property-graph model that supports abs
 - SQL joins
 - adding/deleting relationships
 - loading, adding, updating or deleting single row using primary key (simple or composite)
-- names of tables, table columns, and result columns used in SQL builders (not a major requirement)
+- names of tables, table columns, views, functions, stored procedures and query result columns used in SQL builders
+  - not required for dynamically typed languages
+  - attempting to leverage static typing is a hard CS problem, and requires code generation
 
 learn from
+- https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
+- https://scala-slick.org/doc/3.0.0/orm-to-slick.html
+- https://rdo.devzest.com
 - https://www.datanucleus.org/products/accessplatform_4_2/jdo/metadata_api.html
 - https://www.datanucleus.org/products/accessplatform_4_2/jdo/metadata_xml.html
 - https://openjpa.apache.org/builds/1.2.3/apache-openjpa/docs/jpa_langref.html
@@ -14,5 +19,4 @@ learn from
 - https://docs.oracle.com/javaee/7/api/javax/persistence/metamodel/package-summary.html
 - https://docs.oracle.com/javaee/7/api/javax/persistence/criteria/package-summary.html
 - https://docs.spring.io/spring-framework/docs/current/javadoc-api/org/springframework/jdbc/core/JdbcTemplate.html
-- https://scala-slick.org/doc/3.0.0/orm-to-slick.html
-- https://github.com/querydsl/querydsl (looks like JPA Criteria makes it easier to add native SQL to SQL builder)
+- https://github.com/querydsl/querydsl (looks like JPA Criteria API makes it easier than JDOQL API to throw in native SQL)
