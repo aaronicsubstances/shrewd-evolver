@@ -1,5 +1,8 @@
 Develop best practices for working with ERD of property-graph model that supports abstraction of things like
-- ACID transactions 
+- ACID transactions - this will work best with database technologies in which strings can be used to do everything from DDL
+  to DML, ie like SQL. In that case a transaction coordinator can be in a separate process from its clients (transaction
+  coordinator will nevertheless have to be the only one who can create and store transaction handles,
+  and lease them out by GUID reference).
 - SQL joins
 - adding/deleting relationships
 - loading, adding, updating or deleting single row using primary key (simple or composite)
