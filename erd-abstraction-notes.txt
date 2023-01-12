@@ -1,5 +1,4 @@
-Make use of libraries for SQL builders available in every major web programming language.
-Create an ORM-like abstraction for ERD of property-graph model that supports abstraction of things like
+Develop best practices for working with ERD of property-graph model that supports abstraction of things like
 - ACID transactions 
 - SQL joins
 - adding/deleting relationships
@@ -8,7 +7,19 @@ Create an ORM-like abstraction for ERD of property-graph model that supports abs
   - not required for dynamically typed languages
   - attempting to leverage static typing is a hard CS problem, and requires code generation
 
-learn from
+*Can make use of SQL scripts for almost static SQL (notably this works for NoSQL too)
+ - for static sql, use strategy of storing SQL in file scripts, which can be tested independently of the program against the database
+ by a quality assurance tool
+ - for dynamic sql with a small number of possible variations (e.g. max of 10), store common SQL in file script and define the variations in terms
+ of diff patches to the common script. Then let independent QA tool test each variation against database.
+ - can use code generation to generate result set row class, or tuple of classes, by annotating result columns and their data types in the SQL scripts.
+
+*Can make use of libraries for SQL builders available in every major web programming language (notably this works for NoSQL too)
+ - especially for very dynamic SQL, that is, SQL statements with a large number of variations (e.g. more than 20).
+ - only when SQL statement requires native features unsupported by particular SQL builder library AND is very dynamic, do we HAVE TO generate SQL
+   without builders and also forego the ability to independently test.
+
+learn from the following before attempting to implement ORMs
 - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
 - https://scala-slick.org/doc/3.0.0/orm-to-slick.html
 - https://rdo.devzest.com
