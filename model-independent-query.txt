@@ -1,4 +1,4 @@
-## Model-Independent Query Support
+## Model-Independent Query Supportc(aka Mini MapReduce)
 
 Assume use of SQLite, or Temporary Table mechanism supported by mainstream RDBMSes for model independent query support.
 Make it easy to import large datasets into temporary SQLite databases or temporary tables, and manages automatic
