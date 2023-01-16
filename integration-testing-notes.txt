@@ -8,8 +8,9 @@ let declarations be sorted
 
 create skip exception and wrapper method for test cases
 
+make use of awaitility (https://github.com/awaitility/awaitility), as last resort for async testing
 
-add tree data matcher and anonymous types (better than FluentAssertions which requires class libraries)
+add tree data matcher and anonymous types (better than https://github.com/fluentassertions/fluentassertions which requires class libraries)
 
 provide simple facade over httpclient, like js fetch, python requests
 
