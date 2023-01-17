@@ -47,6 +47,7 @@ Learn from the following before attempting to implement ORM-like features (like 
      - best at achieving atomicty by abortability.
      - best at achieving snapshot isolation for readonly queries.
      - best at preventing access to results from uncommitted transactions.
+     - insufficient and inflexible in achieving consistency.
   2. Applications and business rules
      - last resort for consistency.
   1. Try-Confirm-Cancel (aka Try, Commit, and Cancel model)
@@ -55,9 +56,11 @@ Learn from the following before attempting to implement ORM-like features (like 
      - last resort for isolation, in which messages are processed one at a time, effectively forcing sequential processing, and hence achieving isolation.
      - last resort for atomicity by endless retrying
 
-## Model-Independent Query Strategy
+## Model-Independent Querying
 
-Goal is to have a last resort for traversing relationships between entities (e.g. performing SQL joins) regardless of the data model. And that is by saving dataset in SQL tables, querying them in SQL, and repeating the saving and querying until the desired results are obtained.
+Goal is to have a last resort for traversing relationships between entities (e.g. performing SQL joins) regardless of the data model. Thus this can be seen as precursor to distributed filesystems and large-scale data processing engines.
+
+My proposal for achieving this goal is to save dataset from any data source in SQL tables, query them in SQL, and repeat the saving and querying until the desired results are obtained.
 
   1. Assume use of SQLite, or temporary table mechanism supported by mainstream RDBMSes for model independent query support.
   2. Make it easy to import large datasets into temporary SQLite databases or temporary tables, and manage automatic deletion of such objects after some timeouts.
