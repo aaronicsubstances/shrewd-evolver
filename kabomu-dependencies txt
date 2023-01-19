@@ -1,6 +1,5 @@
-- generalized unix init mechanism, which no child process cannot outlive
+- generalization of OS shell jobs. Alternatively, generalized unix init mechanism, which no child process cannot outlive.
 - system administration function for monitoring process group
 - ACID transaction orchestrator
 - embedded in-memory database to serve shared serializable memory needs
-- design pattern for variable number of producers but fixed number of consumers, where all the consumers reside in a single process - this is to enable building a small-scale deferred request processing system
--
+- precursor to log-based message broker, i.e. design pattern for variable number of producers but fixed number of consumers, where all the consumers reside in a single process - this is to enable building a small-scale deferred request processing system
