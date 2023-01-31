@@ -26,7 +26,7 @@ About abstractions that enables programmers to make incremental changes:
   1. build data architecture on the entity-relational diagram (ERD). This is equivalent to building on property-graph model, provided distinction can be made between one-sided relationships which cannot have properties, and all other relationships.
      1. abstract all relationships as "zero-to-many", i.e. hide one-sided relationship implementation details from the public.
      2. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public, i.e. always  use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
-  2. build code architecture on the assumption that all processing occurs similar to how Apache/PHP processes HTTP requests: a single process/thread is created to handle an incoming HTTP request representing the input of I/O, and the output of I/O will be contained in the corresponding HTTP response.
+  2. build code architecture on the assumption that all processing occurs similar to how Apache/PHP and AWS Lambda functions process HTTP requests: a single process/thread is created to handle an incoming HTTP request representing the input of I/O, and the output of I/O will be contained in the corresponding HTTP response.
      1. This model is very flexible because barring efficiency concerns, all I/O can be converted into network requests.
      3. Another takeaway here is that if an architecture limits its use of memory to local variables, serializable memory, scheduled timeouts and I/O callbacks, then it will likely result in code which is simpler to understand.
   3. present software to stakeholders and public as a single abstraction, regardless of the perspective programmers have of the software from its architecture.
@@ -35,8 +35,8 @@ About abstractions that enables programmers to make incremental changes:
 
 About explicitly recording an architecture in its implementation:
   1. enforce code architecture by abstracting modular boundaries with serializable, HTTP-like communication protocols. See [Kabomu](https://github.com/aaronicsubstances/cskabomu) and https://rfc.zeromq.org/spec/33/.
-  4. encode entity-relational diagram into data storage. That is, have names and properties which communicate the kind of an entity or relationship, which communicate whether a node in a property-graph model is an entity or a relationship, and which communicate the kind of the target entity of a relationship.
+  4. encode dabase schema and entity-relational diagram (ERD) into data storage in such a way that it can be extracted by database reverse-engineering tools. This is especially important for NoSQL databases which are usually schemaless. For simple SQL designs, the database schema may approximate the ERD, but in general for SQL dbs this point suggests that portions of ERD not represented by the schema should somehow be encoded in a way that a database reverse engineering tool can extract.
 
 About measures which make transition to distributed systems easier:
-  1. deploy the code as two nearly-identical process groups.
-  1. manage the data as two nearly-identical horizontal data partitions.
+  1. deploy the code as two nearly-identical processes (or process groups).
+  1. manage the data as two nearly-identical horizontal data partitions, but such that local ACID transactions can be conducted across them.
