@@ -8,7 +8,7 @@ Sometimes the opinions take the form of source code files implementing a proposa
 ## My Last Resort for Dealing with Fragile Software Architectures
 
   1. Code generation
-  2. https://github.com/aaronicsubstances/code-augmentor
+  2. https://github.com/aaronicsubstances/code-augmentor-nodejs
 
 
 ## My Ideal Software Architecture
