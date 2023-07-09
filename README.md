@@ -35,7 +35,7 @@ About abstractions that enables programmers to make incremental changes within t
      3. separate concerns of number of modules from number of databases, by managing data with ACID transactions inside single homogenous database for as long as possible.
 
 About explicitly recording an architecture in its implementation:
-  1. enforce code architecture by abstracting modular boundaries with serializable, HTTP-like communication protocols. See https://github.com/aaronicsubstances/cskabomu and https://rfc.zeromq.org/spec/33/.
+  1. enforce code architecture by implementing modular boundaries with serializable, HTTP-like communication protocols. See https://github.com/aaronicsubstances/cskabomu and https://rfc.zeromq.org/spec/33/.
   4. encode database schema and entity-relational or property-graph model into data storage in such a way that it can be extracted by database reverse-engineering tools.
      1. This is especially important for NoSQL databases which are usually without a database schema.
      2. For simple SQL designs, the database schema may approximate the entity-relational model.
