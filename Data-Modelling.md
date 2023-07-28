@@ -28,14 +28,15 @@ Save dataset from any data source into embedded SQL databases (such as SQLite an
 
 ## Minimal ORM Requirements for both SQL and NoSQL Databases
 
+  1. Institute custom code generator for abstracting names and types of SQL table columns, and names of other database objects (i.e. tables, sequences, stored procedures, etc).
   1. Implement function for converting between trees and record list
      - split function into (1) mapping record list into tuples of classes and (2) map tuples of classes to trees (e.g. using groupByAdjacent operator on sorted record list, such as can be found in morelinq library) and vice versa (e.g. using selectMany operator such as can be found in Reactive Extensions).
-     - main job then is about mapping result set to list/tuple of field sets. That a list of field collection, where each collection doesn't duplicate field names, but a name may be present in two or more collections. 
-     - So given a row like {name:A, value:1}, {name:B, value:2}, {name:A, value: 0}, and a list of field sets like class C1 {A,B}, class C2 {A}, the row should be mapped to something like C1(A=1,B=2), C2(A=0).
+     - main job then is about mapping result set to list of tuples of "field/column sets", where each column set doesn't duplicate field names, but a name may be present in two or more column sets. 
+     - So given a row like {name:A, value:1}, {name:B, value:2}, {name:A, value: 0}, and a list of column sets like class C1 {A,B}, class C2 {A}, the row should be mapped to something like C1(A=1,B=2), C2(A=0).
      - an application-defined mapper function can then convert the database classes used in the tuples, to classes with property names which are more convenient to higher layers  of an application.
   2. Implement function for loading targets of many to many relationships, given id
      - implement efficiently in document db, sql or graph db using knowledge of all distinct ordered ids whose targets are to be loaded. By having many to many table sorted by source ids, fetch target ids, and use WHERE id in (target ids)
 
-Learn from the following before attempting to implement advanced ORM features, especially abstracting names of SQL table columns, and fetching target of relationships.
+Learn from the following before attempting to implement advanced ORM features, such as abstracting names of SQL table columns, and fetching target of relationships.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
   - https://scala-slick.org/doc/3.0.0/orm-to-slick.html
