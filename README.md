@@ -23,10 +23,8 @@ My ideal software architecture (which comprises code and data architectures)  is
 ## My Proposals for Designing Flexible Software Architectures
 
 About abstractions that enables programmers to make incremental changes within the constraints of the laws of conservation of familiarity and organisational stability:
-  1. build data architecture on the property-graph model (near equivalent of entity-relational model), in which both nodes and edges belong to one bag/multiset, and in which distinction exists between one-sided relationships which cannot have properties, and all other kind of relationships.
+  1. build data architecture on the property-graph model (near equivalent of entity-relational model).
      1. This approach seeks to leverage the success story of SQL databases, whose flexibility come from multisets and the entity-relationship model.
-     1. abstract all relationships as potentially many-to-many, i.e. hide one-sided relationship implementation details from the public.
-     2. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public, i.e. always  use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
   2. build code architecture on the assumption that all processing occurs similar to how Apache/PHP and AWS Lambda functions process HTTP requests: a single process/thread is created to handle an incoming HTTP request representing the input of I/O, and the output of I/O will be contained in the corresponding HTTP response.
      1. This approach seeks to leverage the fact that all I/O can be converted into network requests, ie from PCI Express to the Internet.
      3. Another takeaway is that if an architecture limits its use of memory to local variables, serializable memory, scheduled timeouts and I/O callbacks, then it will result in codebases which are structured in similar ways.
