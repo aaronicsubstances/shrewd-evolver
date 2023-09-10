@@ -67,7 +67,7 @@ JPA's persistence.xml file is an example of the kind of database information tha
 
 Represent any helping code artifacts to perform a read and write database operation as an "internal stored procedure" which generates something like prepared SQL statements.
 
-To make it easiest to test variations in generated query code snippets, the query generation part should be generated with the equivalent of a pure function with these characteristics:
+To make it easier to test variations in generated query code snippets, the query generation part should be generated with the equivalent of a pure function with these characteristics:
   - Contains only sequential statements and non-nested (ie top-level) if-else statements
   - All the boolean conditions for the if statements constitute the beginning code of the function, and are determined only by the procedure parameters.
   - Each if condition clause is trivially exactly one boolean condition
@@ -75,15 +75,7 @@ To make it easiest to test variations in generated query code snippets, the quer
 
 Create helper functions which access database information stored in XML/JSON/YAML.
 Notable examples are
-  1. Funtion (or canned functions) for generating SQL join clauses which take the following parameters (may have to take care of composite keys):
-     - join qualifier - LEFT, INNER or OUTER (defaults to none)
-     - source table - required
-     - source table alias (defaults to name of table)
-     - target table - required
-     - target table alias (defaults to name of table)
-     - source column names (defaults to primary key)
-     - target column names (defaults to foreign key linked to primary key)
-     - join table alias (only applies if join tables are involved, defaults to join table name)
+  1. Funtion (or canned functions) for generating SQL join clauses
   2. Function for mapping tabular query results (typically from SQL) to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships
 
 
