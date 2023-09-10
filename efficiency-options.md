@@ -7,7 +7,7 @@ I/O Tasks
 ---------
 - Database caching - applied to frequently used horizontal partititions. Sort of in-memory document database.
 - Helps to leverage denormalization in data modelling to make data caching easier. For SQL this means something like maintaining replica copies of source table columns in other tables' columns, and using log-based message broker (or precursor) to maintain consistency across replicas.
-- "Conditional acid" as an alternative to eventual consistency - ie different people can see different views (ie different read consistencies) of the data depending on destination and time of writes, but writes which cannot be lost, must be acidly stored. For nosql this means database durability and use of log-based message broker (or precursor) to achieve eventual consistency.
+- "Conditional acid" as equivalent to eventual consistency - ie different people can see different views (ie different read consistencies) of the data depending on destination and time of writes, but writes which cannot be lost, must be acidly stored. For nosql this means database durability and use of log-based message broker (or precursor) to achieve eventual consistency.
 - Atomic file renaming for support file rollover and deletion (used by databases behind the scenes), to support some denormalization and leverage fact that the more data in a table, the more expensive full scans become.
 - Support crashing the system if a "heterogenous commit" (ie via log-based message broker or precursor) fails after writing to some nodes, and support completing all pending heterogenous commits at application startup (similar to RDBMS startup recovery routine).
 
