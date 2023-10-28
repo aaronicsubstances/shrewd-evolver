@@ -67,28 +67,23 @@ JPA's persistence.xml file is an example of the kind of database information tha
 
 Represent any helping code artifacts to perform a read and write database operation as an "internal stored procedure" which generates something like prepared SQL statements.
 
-To make it easier to test variations in generated query code snippets, the query generation part should be generated with the equivalent of a pure function with these characteristics:
+To make it easier to test variations in generated query code snippets, the query generation part can be made equivalent to a pure function with these characteristics:
   - Contains only sequential statements and non-nested (ie top-level) if-else statements
   - All the boolean conditions for the if statements constitute the beginning code of the function, and are determined only by the procedure parameters.
   - Each if condition clause is trivially exactly one boolean condition
   (e.g "if (condition1)").
 
-Create helper functions which access database information stored in XML/JSON/YAML.
+Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
 Notable examples are
   1. Funtion (or canned functions) for generating SQL join clauses
   2. Function for mapping tabular query results (typically from SQL) to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships
 
 
 Some possible dependencies:
-  1. Deserialization logic of read-only query results (e.g. mappers between query results and database classes resulting from code generation) may need to be maintained with production data and "runtime tests".
-     - By "runtime tests" I am referring to tests in general which run against production deployment independent of deployment attempts
-     - SQL makes this considerably easier than NoSQL, because even an empty query result set can sufficiently indicate the columns/fields of the query result. So mapper tests can be done within deployment attempts and dispense with runtime tests.
-     - Generally for SQL and NoSQL however, existing production database contents and optionally schema define the schema of database contents. This suggests having a last resort of testing mappers against the production database.
-        - E.g. during production one can track the schemas of read-only query results, and make this data available during mapper tests made part of runtime tests. Mapper tests are then to check for whether their fields of interest are found, and additionally are of the expected types.
-        - Even for SQL, these tests can expose a divergence between the production database and the development database (e.g. schema, expected data).
+  1. Deserialization logic of read-only query results (e.g. mappers between query results and database classes resulting from code generation) may need to be maintained with production data.
+     - SQL makes this considerably easier than NoSQL, because even an empty query result set can sufficiently indicate the columns/fields of the query result.
+     - Generally for SQL and NoSQL however, existing production database contents and optionally schema define the schema of database contents. This suggests having a last resort of testing mappers against the production database (e.g. during runtime initialization) with test parameter values specified in deployment configuration per readonly query (so as to make readonly queries return non-empty data by default).
   2. Additional second-stage mapper functions may have to be defined to convert the database classes resulting from code generation, to data transfer objects for use by higher layers of an application.
      - Further impetus for this can from a situation where query result items are always of one generic type  (e.g. list or tuple).
      - This also provides the stage of mapping list to trees (e.g. using groupByAdjacent operator on sorted record list, such as can be found in morelinq .NET library) and vice versa (e.g. using selectMany operator such as can be found in Reactive Extensions libraries).
-     - NoSQL makes this considerably easier by eliminating this stage entirely, since query results usually already are trees of high level structures known to the application code.
-
-
+     - NoSQL makes this considerably easier by nearly eliminating this stage entirely, since query results usually already are trees of high level structures known to the application code.

@@ -8,7 +8,7 @@ Sometimes the opinions take the form of source code files implementing a proposa
 ## My Last Resort for Dealing with Fragile Software Architectures
 
   1. Code generation
-  2. https://github.com/aaronicsubstances/code-augmentor
+  2. Code Augmentor - https://github.com/aaronicsubstances/code-augmentor
 
 
 ## My Ideal Software Architecture
@@ -25,7 +25,7 @@ I think that the three parameters of lines of code (*if test code is included*),
 
 I envision software as increasing in complexiy according to the following stages:
   1. one module, which can be easily rewritten from scratch.
-  2. multiple modules in which each module can be easily rewritten from scratch independent of the others.
+  2. multiple modules, in which each module can be easily rewritten from scratch independent of the others, and each shared module involved can be safely duplicated for use in the same process during a rewrite (as long as namespaces are changed, and syncing across duplicates is managed automatically by a tool like Code Augmentor).
   3. one or more modules cannot be easily rewritten from scratch without a major software development effort.
   4. evolution to distributed system seems inevitable, because of pressure from external inputs (typical web requests) on network infrastructure, computer hardware and software resources and database storage facilities.
   5. distributed system involving multiple code deployments
