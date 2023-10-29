@@ -2,6 +2,8 @@ General Notes
 -------------
 - Code improvements (esp. database access) is far likely the solution to efficiency problems than vertical scaling, which in turn is far likely the solution than horizontal scaling.
 - All concerns of efficiency should be investigated by profiler on production deployment, in order to avoid wasting time with guess work and premature optimizations.
+- Optimized code can be made more maintainable by keeping the unoptimized code around, and having a
+  random boolean switch which almost always (but not always) turns in favour of the optimized code.
 
 I/O Tasks
 ---------

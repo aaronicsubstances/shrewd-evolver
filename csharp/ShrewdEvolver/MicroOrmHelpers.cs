@@ -7,16 +7,16 @@ namespace AaronicSubstances.ShrewdEvolver
     {
         public class TupleItemAllocator
         {
-            private readonly int tupleLength;
-            private readonly Func<int, string, bool> tupleIntrospector;
-            private readonly Func<int, string> columnIntrospector;
-            private readonly IList<string> endMarkers;
+            private readonly int _tupleLength;
+            private readonly Func<int, string, bool> _tupleIntrospector;
+            private readonly Func<int, string> _columnIntrospector;
+            private readonly IList<string> _endMarkers;
 
             // state
-            private bool doingFlexibleAllocation;
-            private int tupleIndex;
-            private bool canProceedToNext;
-            private int currEndMarkerPtr;
+            private int _currEndMarkerPtr;
+            private bool _doingFlexibleAllocation;
+            private int _tupleIndex;
+            private bool _canProceedToNext;
 
             /// <summary>
             /// Can be used to convert SQL result set into
@@ -50,57 +50,53 @@ namespace AaronicSubstances.ShrewdEvolver
                 {
                     throw new ArgumentNullException(nameof(columnIntrospector));
                 }
-                this.tupleLength = tupleLength;
-                this.tupleIntrospector = tupleIntrospector;
-                this.columnIntrospector = columnIntrospector;
-                this.endMarkers = endMarkers;
+                _tupleLength = tupleLength;
+                _tupleIntrospector = tupleIntrospector;
+                _columnIntrospector = columnIntrospector;
+                _endMarkers = endMarkers;
             }
 
             public int Allocate(int index)
             {
-                string name = columnIntrospector(index);
-                if (!doingFlexibleAllocation)
+                string colName = _columnIntrospector(index);
+                if (!_doingFlexibleAllocation)
                 {
-                    while (endMarkers != null && currEndMarkerPtr < endMarkers.Count)
+                    while (_endMarkers != null && _currEndMarkerPtr < _endMarkers.Count)
                     {
-                        if (name != endMarkers[currEndMarkerPtr])
+                        // treat all indices for end markers as being
+                        // greater than zero.
+                        if (index == 0 || colName != _endMarkers[_currEndMarkerPtr])
                         {
-                            if (currEndMarkerPtr < tupleLength)
+                            if (_currEndMarkerPtr < _tupleLength)
                             {
-                                return currEndMarkerPtr;
+                                return _currEndMarkerPtr;
                             }
                             else
                             {
                                 return -1;
                             }
                         }
-                        currEndMarkerPtr++;
+                        _currEndMarkerPtr++;
                     }
-                    doingFlexibleAllocation = true;
-                    tupleIndex = currEndMarkerPtr;
-                    canProceedToNext = false;
+                    _doingFlexibleAllocation = true;
+                    _tupleIndex = _currEndMarkerPtr;
+                    _canProceedToNext = false;
                 }
-                for (; tupleIndex < tupleLength; tupleIndex++)
+                for (; _tupleIndex < _tupleLength; _tupleIndex++)
                 {
-                    if (tupleIntrospector(tupleIndex, name))
+                    if (_tupleIntrospector(_tupleIndex, colName))
                     {
-                        canProceedToNext = true;
-                        return tupleIndex;
+                        _canProceedToNext = true;
+                        return _tupleIndex;
                     }
-                    if (!canProceedToNext)
+                    if (!_canProceedToNext)
                     {
-                        canProceedToNext = true;
+                        _canProceedToNext = true;
                         break;
                     }
-                    canProceedToNext = false;
+                    _canProceedToNext = false;
                 }
                 return -1;
-            }
-
-            public void Reset()
-            {
-                doingFlexibleAllocation = false;
-                currEndMarkerPtr = 0;
             }
         }
 
@@ -124,5 +120,11 @@ namespace AaronicSubstances.ShrewdEvolver
      - target column names (defaults to foreign key linked to primary key)
      - join table alias (only applies if join tables are involved, defaults to join table name)
     */
+    /*
+     * Join clause generation code can be generalized to picking
+     * the shortest join route between entities from a ERD graph
+     * which are not directly connected via a foreign key or
+     * join table.
+     */
     }
 }
