@@ -63,7 +63,7 @@ JPA's persistence.xml file is an example of the kind of database information tha
 Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
 Notable examples are
   1. Functions which dynamically select a prepared SQL statement to execute from a specific subset of canned SQL statements, depending on the parameters.
-  2. Functions for mapping SQL query results to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships (this is meant to precede conversion to data transfer objects).
+  2. Functions for mapping SQL query results to list of tuples of database classes from code generation. This is meant to precede conversion to data transfer objects. Ideas for this can be seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships and https://www.doctrine-project.org/projects/doctrine-orm/en/3.3/reference/native-sql.html. 
 
 Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
 
