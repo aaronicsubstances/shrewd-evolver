@@ -31,7 +31,10 @@
 ## Last Resort for Querying regardless of Database or Model
 
 *Break querying into stages, consider involving application code to query the SQL/NoSQL query results, and consider involving "repeat querying".*
-  - By "repeat querying", I mean: save either query result set or dataset from a data source, into embedded SQL databases (such as SQLite and DuckDB) or temporary SQL tables of popular RDBMses, query them in SQL, consider involving application code to query the SQL query results, save the result set to SQL/NoSQL storage, and repeat the querying and saving until the desired results are obtained.
+
+The point here is based on the assumption that SQL is better than NoSQL for generating reports and queries that was not anticipated by the original database creators.
+
+  - "Repeat querying" here means: save either query result set or dataset from a data source, into embedded SQL databases (such as SQLite and DuckDB) or temporary SQL tables of popular RDBMses, query them in SQL, consider involving application code to query the SQL query results, save the result set to SQL/NoSQL storage, and repeat the querying and saving until the desired results are obtained.
   - The application-code side of querying should resemble MapReduce, ie is based on reduce (e.g. map, filter, selectMany, groupByAdjacent, application of window functions), sort, 
   merge-join (e.g. union, intersection, except, equi-join), and functions common to most databases, spreadsheet applications and programming languages (e.g. LIKE, uppercase, arithmetic).
 
