@@ -26,8 +26,8 @@ I think that the three parameters of lines of code (*if test code is included*),
 I envision software as increasing in complexiy according to the following stages:
   1. one module, which can be easily rewritten from scratch.
   2. multiple modules, in which each module can be easily rewritten from scratch independent of the others, and each shared module consists of "relocatable source code files".
-    - A shared module consists of relocatable source code files if it can be duplicated under a different namespace or version, for use in the same process or machine together with the original.
-    - Concept of relocatable source code files is similar to concept of relocatable binary/object files, and is the key to enabling shared modules to be easily rewritten from scratch.
+     - A shared module consists of relocatable source code files if it can be duplicated under a different namespace or version, for use in the same process or machine together with the original.
+     - Concept of relocatable source code files is similar to concept of relocatable binary/object files, and is the key to enabling shared modules to be easily rewritten from scratch.
   4. one or more modules cannot be easily rewritten from scratch without a major software development effort.
   5. evolution to distributed system seems inevitable, because of pressure from external inputs (typical web requests) on network infrastructure, computer hardware and software resources and database storage facilities.
   6. distributed system involving multiple code deployments
