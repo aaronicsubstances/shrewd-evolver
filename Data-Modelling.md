@@ -5,7 +5,7 @@
 *Use the property-graph model*.
 
 "Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (map of key-value pairs) in the case of NoSQL. Also in this model, distinction exists between nodes and edges/relationships, and distinction exists between one-sided relationships which cannot have properties, and all other kind of relationships.
-  1. have a way to identify the type of each node, and each edge (ie either one-sided relationship which cannot have properties, or not). And in the case of edges, also have a way to identify the type of the targets of the relationship.
+  1. have a way to identify the type of each node, and each edge (ie either one-sided relationship which cannot have properties, or not). And in the case of edges, also have a way to identify the type of each of the targets of the relationship.
   1. abstract all relationships as potentially many-to-many to the public, i.e. hide one-sided relationship implementation details from the public.
   2. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public
      - E.g. always use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
@@ -63,7 +63,7 @@ JPA's persistence.xml file is an example of the kind of database information tha
 Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
 Notable examples are
   1. Functions which dynamically select a prepared SQL statement to execute from a specific subset of canned SQL statements, depending on the parameters.
-  2. Functions for mapping SQL query results to list of tuples of database classes from code generation. This is meant to precede conversion to data transfer objects. Ideas for this can be seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships and https://www.doctrine-project.org/projects/doctrine-orm/en/3.3/reference/native-sql.html. 
+  2. Functions for mapping SQL query results to list of tuples of database classes from code generation. This is meant to precede conversion to data transfer objects. Ideas for this can be seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships
 
 Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
 
