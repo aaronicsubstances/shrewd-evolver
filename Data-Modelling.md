@@ -36,7 +36,7 @@
   - The application-code side of querying should resemble MapReduce, ie is based on reduce (e.g. map, filter, selectMany, groupByAdjacent, application of window functions), sort, 
   merge-join (e.g. union, intersection, except, equi-join), and functions common to most databases, spreadsheet applications and programming languages (e.g. LIKE, uppercase, arithmetic).
 
-This approach is based on the assumption that SQL is better than NoSQL for generating reports and queries that was not anticipated by the original database creators.
+This approach is based on the assumption that SQL is better than NoSQL for generating reports and queries that were not anticipated by the original database creators.
 This approach provides other related benefits:
   - Can serve as a last resort for traversing relationships in any database model, since traversing relationships is arguably equivalent to performing merge-joins.
   - Provides one solution to maintaining many-to-many relationships in document databases or hierarchical/tree data models, since traversing many-to-many relationships in relational data models is about performing multiple merge-join operations.
@@ -66,6 +66,8 @@ Notable examples are
   2. Functions for mapping SQL query results to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships (this is meant to precede conversion to data transfer objects).
 
 Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
+
+Note that it may be helpful to have a way to run code generation multiple times and not just once initially. And so it may be necessary to have a way to detect unwanted changes to generated code artifacts.
 
 Learn from the following and avoid attempting to implement full-blown ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
