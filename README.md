@@ -8,7 +8,7 @@ Sometimes the opinions take the form of source code files implementing a proposa
 ## My Last Resort for Dealing with Fragile Software Architectures
 
   1. Code generation
-  2. Code Augmentor - https://github.com/aaronicsubstances/code-augmentor
+  2. Code generation with support for detecting changes to generated code artificats. See https://github.com/aaronicsubstances/code-augmentor for details.
 
 
 ## My Ideal Software Architecture
@@ -26,24 +26,21 @@ I think that the three parameters of lines of code (*if test code is included*),
 I envision software as increasing in complexiy according to the following stages:
   1. one module, which can be easily rewritten from scratch.
   2. multiple modules, in which each module can be easily rewritten from scratch independent of the others, and each shared module consists of "relocatable source code files".
-  3. one or more modules cannot be easily rewritten from scratch without a major software development effort.
-  4. evolution to distributed system seems inevitable, because of pressure from external inputs (typical web requests) on network infrastructure, computer hardware and software resources and database storage facilities.
-  5. distributed system involving multiple code deployments
+    - A shared module consists of relocatable source code files if it can be duplicated under a different namespace or version, for use in the same process or machine together with the original.
+    - Concept of relocatable source code files is similar to concept of relocatable binary/object files, and is the key to enabling shared modules to be easily rewritten from scratch.
+  4. one or more modules cannot be easily rewritten from scratch without a major software development effort.
+  5. evolution to distributed system seems inevitable, because of pressure from external inputs (typical web requests) on network infrastructure, computer hardware and software resources and database storage facilities.
+  6. distributed system involving multiple code deployments
 
 I think that software belonging to the first two stages can dispense with serious software architecture considerations, because:
   - The number of lines of code is small enough to be its own documentation, from which a software architecture can be extracted.
   - It can always be rewritten from scratch as a last resort, if its architecture is found to be no longer satisfactory.
 
-NB:
-  - A shared module consists of relocatable source code files if it can be duplicated under a different namespace or version, for use in the same process or machine together with the original.
-  - Concept of relocatable source code files is similar to concept of relocatable binary/object files, and is the key to enabling shared modules to be easily rewritten from scratch.
-  - Challenge of duplication of code can be reduced automatically by a tool like Code Augmentor.
-
 
 ## My Proposals for Designing Flexible Software Architectures
 
 About abstractions that enables programmers to make incremental changes within the constraints of the laws of conservation of familiarity and organisational stability:
-  1. build data architecture on the property-graph model (near equivalent of entity-relational model).
+  1. build data architecture on the property-graph model, which is a near equivalent of entity-relational model as defined in https://github.com/aaronicsubstances/shrewd-evolver/blob/master/Data-Modelling.md
      1. This approach seeks to leverage the success story of SQL databases, whose flexibility come from multisets and the entity-relationship model.
   2. build code architecture on the assumption that all processing occurs similar to how Apache/PHP and AWS Lambda functions process HTTP requests: a single process/thread is created to handle an incoming HTTP request representing the input of I/O, and the output of I/O will be contained in the corresponding HTTP response.
      1. This approach seeks to leverage the fact that all I/O can be converted into network requests, ie from PCI Express to the Internet.
