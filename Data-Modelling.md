@@ -4,18 +4,18 @@
 
 *Use the property-graph model*.
 
-By property-graph model, I am referring to the near equivalent of entity-relational model in which both nodes and edges are organised into bags/multisets, distinction exists between nodes and edges/relationships, and distinction exists between one-sided relationships which cannot have properties, and all other kind of relationships.
-  1. have a way to identify the type of each node, and each edge (ie either one-sided relationship which cannot have properties, or not). And in the case of edges, also have a way to identify the targets of the relationship (NB: not a big issue for SQL thanks to its foreign keys concept).
+"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (map of key-value pairs) in the case of NoSQL. Also in this model, distinction exists between nodes and edges/relationships, and distinction exists between one-sided relationships which cannot have properties, and all other kind of relationships.
+  1. have a way to identify the type of each node, and each edge (ie either one-sided relationship which cannot have properties, or not). And in the case of edges, also have a way to identify the type of the targets of the relationship.
   1. abstract all relationships as potentially many-to-many to the public, i.e. hide one-sided relationship implementation details from the public.
   2. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public
      - E.g. always use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
 
-## Last Resort Options for achieving ACID
+## Last Resort Options for achieving ACID transactions
 
-"ACID" here refers to Atomicity, Consistency, Isolation, Durability
+"ACID transactions" refers to database transactions ideally characterized by atomicity, consistency, isolation and durability.
 
-  1. "ACID" databases
-     - best at achieving durability.
+  1. "ACID databases", i.e. databases which promise full or partial support for ACID transactions.
+     - last resort for achieving durability.
      - best at achieving atomicty by abortability.
      - best at achieving snapshot isolation for readonly queries.
      - best at preventing access to results from uncommitted transactions.
@@ -38,7 +38,6 @@ By property-graph model, I am referring to the near equivalent of entity-relatio
 This approach provides other related benefits:
   - Can serve as a last resort for traversing relationships in any database model, since traversing relationships is arguably equivalent to performing merge-joins.
   - Provides one solution to maintaining many-to-many relationships in document databases or hierarchical/tree data models, since traversing many-to-many relationships in relational data models is about performing multiple merge-join operations.
-     - E.g. one can have the ids of two document collections in a relational database (either on demand at query time, or maintained in sync with document database at write time), perform many-to-many SQL joins, and use the results to perform further queries in the document database.
   - Provides one solution to the problem of having too many filtering conditions in an SQL query, such that the SQL execution engine is forced to do table scans and dispense with indices. And that solution is to apply few filtering conditions which are most likely to exclude the highest possible
   number of non-matching rows. Then further filtering can be dealt with by involving application code querying.
 
@@ -57,19 +56,16 @@ store all database information in a data storage format (e.g. XML, JSON, YAML),
 use a code generator to generate code artifacts required by the chosen micro-ORM solution,
 and generate any custom helping code artifacts purely based on the database information*
 
-[Code augmentor](https://github.com/aaronicsubstances/code-augmentor) library can help with this kind of code generation, since it allows for breaking updates to be easily detected.
+JPA's persistence.xml file is an example of the kind of database information that has to be stored. In contrast, a micro-ORM will definitely not need all that information, will not need to use XML, and will make the file readily available to application code for introspection. Also it should be possible to indicate prescence of a relationship without implying the existence of a database foreign key contraint.
+
+Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
+Notable examples are
+  1. Functions which dynamically select a prepared SQL statement to execute from a specific subset of canned SQL statements, depending on the parameters.
+  2. Functions for mapping SQL query results to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships (this is meant to precede conversion to data transfer objects).
+
+Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
 
 Learn from the following and avoid attempting to implement full-blown ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
   - https://scala-slick.org/doc/3.0.0/orm-to-slick.html
   - https://martinfowler.com/articles/evodb.html
-
-JPA's persistence.xml file is an example of the kind of database information that has to be stored. In contrast, a micro-ORM will definitely not need all that information, will not need to use XML, and will make the file readily available to application code for introspection. Also it should be possible to indicate prescence of a relationship without implying the existence of a database foreign key contraint.
-
-Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
-
-Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
-Notable examples are
-  1. Functions for generating SQL join clauses
-  2. Functions for mapping SQL query results to list of tuples of database classes from code generation, as seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships (this is meant to precede conversion to data transfer objects).
-  3. Functions which dynamically select a prepared SQL statement to execute from a specific subset of canned SQL statements, depending on the parameters.
