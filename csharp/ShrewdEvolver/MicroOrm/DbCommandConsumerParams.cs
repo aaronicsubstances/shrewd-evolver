@@ -7,7 +7,7 @@ using System.Threading.Tasks;
 
 namespace AaronicSubstances.ShrewdEvolver.MicroOrm
 {
-    public class DbCommandConsumerParams : CommonConfigFunctionContext
+    public class DbCommandConsumerParams : BaseQueryParamConfigFunctionParams
     {
         public DbCommand DbCommand { get; set; }
         public object SourceValueContainer { get; set; }

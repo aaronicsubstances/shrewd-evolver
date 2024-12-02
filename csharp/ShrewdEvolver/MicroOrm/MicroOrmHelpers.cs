@@ -61,5 +61,28 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
                 return merged;
             }
         }
+
+        public static IDictionary<string, object> MergeEnvironments(IDictionary<string, object> main,
+            IDictionary<string, object> fallback, bool discardFallback)
+        {
+            if (discardFallback || fallback?.Any() != true)
+            {
+                return main;
+            }
+            else if (main?.Any() != true)
+            {
+                return fallback;
+            }
+            else
+            {
+                var merged = new Dictionary<string, object>(fallback);
+                foreach (var kvp in main)
+                {
+                    // add or replace
+                    merged[kvp.Key] = kvp.Value;
+                }
+                return merged;
+            }
+        }
     }
 }

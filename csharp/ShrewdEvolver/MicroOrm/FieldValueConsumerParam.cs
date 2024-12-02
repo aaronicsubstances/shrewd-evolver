@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace AaronicSubstances.ShrewdEvolver.MicroOrm
 {
-    public class FieldValueConsumerParam : CommonConfigFunctionContext
+    public class FieldValueConsumerParam : BaseResultFieldConfigFunctionParams
     {
         public object DestValueContainer { get; set; }
     }

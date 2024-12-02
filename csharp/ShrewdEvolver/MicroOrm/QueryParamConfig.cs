@@ -40,8 +40,13 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
         public IList<ParamValueSupplierType> ParamValueSupplierChain { get; set; }
         public IList<DbCommandConsumerType> DbCommandConsumerChain { get; set; }
         public IDictionary<string, object> Extra { get; set; }
+        public bool DiscardFallbackParamName { get; set; }
+        public bool DiscardFallbackParamType { get; set; }
+        public bool DiscardFallbackSourceName { get; set; }
+        public bool DiscardFallbackSourceConverterType { get; set; }
         public bool DiscardFallbackParamValueSupplierChain { get; set; }
         public bool DiscardFallbackDbCommandConsumerChain { get; set; }
+        public bool DiscardFallbackExtra { get; set; }
 
         public QueryParamConfig MakeDuplicate()
         {
@@ -52,53 +57,35 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
                 ParamType = this.ParamType,
                 SourceName = this.SourceName,
                 SourceConverterType = this.SourceConverterType,
+                ParamValueSupplierChain = this.ParamValueSupplierChain,
+                DbCommandConsumerChain = this.DbCommandConsumerChain,
+                Extra = this.Extra,
+                DiscardFallbackParamName = this.DiscardFallbackParamName,
+                DiscardFallbackParamType = this.DiscardFallbackParamType,
+                DiscardFallbackSourceName = this.DiscardFallbackSourceName,
+                DiscardFallbackSourceConverterType = this.DiscardFallbackSourceConverterType,
                 DiscardFallbackParamValueSupplierChain = this.DiscardFallbackParamValueSupplierChain,
                 DiscardFallbackDbCommandConsumerChain = this.DiscardFallbackDbCommandConsumerChain,
+                DiscardFallbackExtra = this.DiscardFallbackExtra
             };
-            if (this.ParamValueSupplierChain?.Any() == true)
-            {
-                duplicate.ParamValueSupplierChain = new List<ParamValueSupplierType>(
-                    this.ParamValueSupplierChain);
-            }
-            else
-            {
-                duplicate.ParamValueSupplierChain = new List<ParamValueSupplierType>();
-            }
-            if (this.DbCommandConsumerChain?.Any() == true)
-            {
-                duplicate.DbCommandConsumerChain = new List<DbCommandConsumerType>(
-                    this.DbCommandConsumerChain);
-            }
-            else
-            {
-                duplicate.DbCommandConsumerChain = new List<DbCommandConsumerType>();
-            }
-            if (this.Extra?.Any() == true)
-            {
-                duplicate.Extra = new Dictionary<string, object>(this.Extra);
-            }
-            else
-            {
-                duplicate.Extra = new Dictionary<string, object>();
-            }
             return duplicate;
         }
 
         public void TransferNonEmptyPropsAsideId(QueryParamConfig dest)
         {
-            if (!string.IsNullOrEmpty(this.ParamName))
+            if (DiscardFallbackParamName || !string.IsNullOrEmpty(this.ParamName))
             {
                 dest.ParamName = this.ParamName;
             }
-            if (this.ParamType != null)
+            if (DiscardFallbackParamType || this.ParamType != null)
             {
                 dest.ParamType = this.ParamType;
             }
-            if (!string.IsNullOrEmpty(this.SourceName))
+            if (DiscardFallbackSourceName || !string.IsNullOrEmpty(this.SourceName))
             {
                 dest.SourceName = this.SourceName;
             }
-            if (this.SourceConverterType != null)
+            if (DiscardFallbackSourceConverterType || this.SourceConverterType != null)
             {
                 dest.SourceConverterType = this.SourceConverterType;
             }
@@ -108,21 +95,16 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
             dest.DbCommandConsumerChain = MicroOrmHelpers.MergeChains(
                 this.DbCommandConsumerChain, dest.DbCommandConsumerChain,
                 DiscardFallbackDbCommandConsumerChain);
-            if (this.Extra != null)
-            {
-                if (dest.Extra == null)
-                {
-                    dest.Extra = this.Extra;
-                }
-                else
-                {
-                    foreach (var kvp in this.Extra)
-                    {
-                        // add or replace
-                        dest.Extra[kvp.Key] = kvp.Value;
-                    }
-                }
-            }
+            dest.Extra = MicroOrmHelpers.MergeEnvironments(this.Extra,
+                dest.Extra, DiscardFallbackExtra);
+
+            dest.DiscardFallbackParamName = false;
+            dest.DiscardFallbackParamType = false;
+            dest.DiscardFallbackSourceName = false;
+            dest.DiscardFallbackSourceConverterType = false;
+            dest.DiscardFallbackParamValueSupplierChain = false;
+            dest.DiscardFallbackDbCommandConsumerChain = false;
+            dest.DiscardFallbackExtra = false;
         }
     }
 }

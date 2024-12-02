@@ -38,8 +38,12 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
         public IList<FieldValueConsumerType> FieldValueConsumerChain { get; set; }
         public IList<DbCursorConsumerType> DbCursorConsumerChain { get; set; }
         public IDictionary<string, object> Extra { get; set; }
+        public bool DiscardFallbackFieldType { get; set; }
+        public bool DiscardFallbackDestName { get; set; }
+        public bool DiscardFallbackDestConverterType { get; set; }
         public bool DiscardFallbackFieldValueConsumerChain { get; set; }
         public bool DiscardFallbackDbCursorConsumerChain { get; set; }
+        public bool DiscardFallbackExtra { get; set; }
 
         public ResultFieldConfig MakeDuplicate()
         {
@@ -49,49 +53,30 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
                 FieldType = this.FieldType,
                 DestName = this.DestName,
                 DestConverterType = this.DestConverterType,
+                FieldValueConsumerChain = this.FieldValueConsumerChain,
+                DbCursorConsumerChain = this.DbCursorConsumerChain,
+                Extra = this.Extra,
+                DiscardFallbackFieldType = this.DiscardFallbackFieldType,
+                DiscardFallbackDestName = this.DiscardFallbackDestName,
+                DiscardFallbackDestConverterType = this.DiscardFallbackDestConverterType,
                 DiscardFallbackFieldValueConsumerChain = this.DiscardFallbackFieldValueConsumerChain,
                 DiscardFallbackDbCursorConsumerChain = this.DiscardFallbackDbCursorConsumerChain,
+                DiscardFallbackExtra = this.DiscardFallbackExtra,
             };
-            if (this.FieldValueConsumerChain?.Any() == true)
-            {
-                duplicate.FieldValueConsumerChain = new List<FieldValueConsumerType>(
-                    this.FieldValueConsumerChain);
-            }
-            else
-            {
-                duplicate.FieldValueConsumerChain = new List<FieldValueConsumerType>();
-            }
-            if (this.DbCursorConsumerChain?.Any() == true)
-            {
-                duplicate.DbCursorConsumerChain = new List<DbCursorConsumerType>(
-                    this.DbCursorConsumerChain);
-            }
-            else
-            {
-                duplicate.DbCursorConsumerChain = new List<DbCursorConsumerType>();
-            }
-            if (this.Extra?.Any() == true)
-            {
-                duplicate.Extra = new Dictionary<string, object>(this.Extra);
-            }
-            else
-            {
-                duplicate.Extra = new Dictionary<string, object>();
-            }
             return duplicate;
         }
 
         public void TransferNonEmptyPropsAsideId(ResultFieldConfig dest)
         {
-            if (this.FieldType != null)
+            if (DiscardFallbackFieldType || this.FieldType != null)
             {
                 dest.FieldType = this.FieldType;
             }
-            if (!string.IsNullOrEmpty(this.DestName))
+            if (DiscardFallbackDestName || !string.IsNullOrEmpty(this.DestName))
             {
                 dest.DestName = this.DestName;
             }
-            if (this.DestConverterType == null)
+            if (DiscardFallbackDestConverterType || this.DestConverterType == null)
             {
                 dest.DestConverterType = this.DestConverterType;
             }
@@ -101,21 +86,15 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
             dest.DbCursorConsumerChain = MicroOrmHelpers.MergeChains(
                 this.DbCursorConsumerChain, dest.DbCursorConsumerChain,
                 DiscardFallbackDbCursorConsumerChain);
-            if (this.Extra != null)
-            {
-                if (dest.Extra == null)
-                {
-                    dest.Extra = this.Extra;
-                }
-                else
-                {
-                    foreach (var kvp in this.Extra)
-                    {
-                        // add or replace
-                        dest.Extra[kvp.Key] = kvp.Value;
-                    }
-                }
-            }
+            dest.Extra = MicroOrmHelpers.MergeEnvironments(this.Extra,
+                dest.Extra, DiscardFallbackExtra);
+
+            dest.DiscardFallbackFieldType = false;
+            dest.DiscardFallbackDestName = false;
+            dest.DiscardFallbackDestConverterType = false;
+            dest.DiscardFallbackFieldValueConsumerChain = false;
+            dest.DiscardFallbackDbCursorConsumerChain = false;
+            dest.DiscardFallbackExtra = false;
         }
     }
 }
