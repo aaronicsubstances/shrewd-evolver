@@ -6,9 +6,8 @@ using System.Threading.Tasks;
 
 namespace AaronicSubstances.ShrewdEvolver.MicroOrm
 {
-    public struct QueryParamValueSupplierParams
+    public class QueryParamValueSupplierParams : CommonConfigFunctionContext
     {
         public object SourceValueContainer { get; set; }
-        public string SourceName { get; set; }
     }
 }

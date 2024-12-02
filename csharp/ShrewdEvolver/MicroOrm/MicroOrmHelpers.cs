@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.Common;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Microsoft.Data.SqlClient;
@@ -41,6 +42,24 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
                 throw new Exception($"Property '{destName}' not found on object of type {destValueContainer.GetType()}");
             }
             prop.SetValue(destValueContainer, value);
+        }
+
+        public static IList<T> MergeChains<T>(IList<T> main, IList<T> fallback, bool discardFallback)
+        {
+            if (discardFallback || fallback?.Any() != true)
+            {
+                return main;
+            }
+            else if (main?.Any() != true)
+            {
+                return fallback;
+            }
+            else
+            {
+                var merged = new List<T>(fallback);
+                merged.AddRange(main);
+                return merged;
+            }
         }
     }
 }

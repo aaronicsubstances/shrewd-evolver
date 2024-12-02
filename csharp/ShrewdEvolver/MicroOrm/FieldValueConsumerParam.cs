@@ -6,10 +6,8 @@ using System.Threading.Tasks;
 
 namespace AaronicSubstances.ShrewdEvolver.MicroOrm
 {
-    public struct FieldValueConsumerParam
+    public class FieldValueConsumerParam : CommonConfigFunctionContext
     {
-        public string DestName { get; set; }
-        public object DestValue { get; set; }
         public object DestValueContainer { get; set; }
     }
 }

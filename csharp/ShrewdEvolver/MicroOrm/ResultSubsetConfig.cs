@@ -2,20 +2,24 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace AaronicSubstances.ShrewdEvolver.MicroOrm
 {
+    public delegate Task<object[]> ResultSubsetReprGeneratorType(ResultSubsetReprGeneratorParams arg);
+
     public class ResultSubsetConfig
     {
-        public ResultSubsetConfig FallbackConfig { get; set; }
-        public List<string> FallbackFieldsToInclude { get; set; }
-        public List<string> FallbackFieldsToExclude { get; set; }
-        public List<ResultFieldConfig> FieldConfigs { get; set; }
-        public ResultFieldConfig FallbackFieldConfig { get; set; }
-        public Func<object> BareResultSubsetGenerator { get; set; }
+        public ResultSubsetConfig Fallback { get; set; }
+        public IList<string> FallbackIdsToInclude { get; set; }
+        public IList<string> FallbackIdsToExclude { get; set; }
+        public IList<ResultFieldConfig> FieldConfigs { get; set; }
+        public ResultFieldConfig CommonFieldConfig { get; set; }
+        public IList<ResultSubsetReprGeneratorType> ResultSubsetReprGeneratorChain { get; set; }
+        public bool DiscardFallbackResultSubsetReprGeneratorChain { get; set; }
 
         /// <summary>
-        /// NB: FallbackFieldConfig overrides FallbackConfig in priority.
+        /// NB: CommonFieldConfig overrides Fallback in priority.
         /// </summary>
         /// <returns></returns>
         public ResultSubsetConfig GetEffectiveConfig()
@@ -24,60 +28,64 @@ namespace AaronicSubstances.ShrewdEvolver.MicroOrm
             {
                 FieldConfigs = new List<ResultFieldConfig>()
             };
+
+            if (Fallback != null)
+            {
+                var fallbackEquivalent = Fallback.GetEffectiveConfig();
+                merged.ResultSubsetReprGeneratorChain = fallbackEquivalent.ResultSubsetReprGeneratorChain;
+                foreach (var fieldConfig in fallbackEquivalent.FieldConfigs)
+                {
+                    if (this.FallbackIdsToExclude?.Any(x => x == fieldConfig.Id) == true)
+                    {
+                        continue;
+                    }
+
+                    // treat non-null but empty included ids as null array, so that all
+                    // non-excluded ids will be included.
+                    if (this.FallbackIdsToInclude?.Any() == true &&
+                        !this.FallbackIdsToInclude.Contains(fieldConfig.Id))
+                    {
+                        continue;
+                    }
+
+                    // make a copy to be modified later.
+                    merged.FieldConfigs.Add(fieldConfig.MakeDuplicate());
+                }
+            }
+
+            if (CommonFieldConfig != null)
+            {
+                foreach (var fieldConfig in merged.FieldConfigs)
+                {
+                    CommonFieldConfig.TransferNonEmptyPropsAsideId(fieldConfig);
+                }
+            }
+
             if (this.FieldConfigs != null)
             {
                 foreach (var fieldConfig in this.FieldConfigs)
                 {
-                    var effectiveFieldConfig = new ResultFieldConfig
+                    ResultFieldConfig existingFieldConfig = null;
+                    if (!string.IsNullOrEmpty(fieldConfig.Id))
                     {
-                        FieldId = fieldConfig.FieldId
-                    };
-                    fieldConfig.OverwriteEmptyPropsAsideId(effectiveFieldConfig);
-                    merged.FieldConfigs.Add(effectiveFieldConfig);
-                }
-            }
-            if (FallbackFieldConfig != null)
-            {
-                foreach (var fieldConfig in merged.FieldConfigs)
-                {
-                    FallbackFieldConfig.OverwriteEmptyPropsAsideId(fieldConfig);
-                }
-            }
-            var fallbackEquivalent = FallbackConfig?.GetEffectiveConfig();
-            if (fallbackEquivalent?.FieldConfigs != null)
-            {
-                foreach (var fieldConfig in fallbackEquivalent.FieldConfigs)
-                {
-                    if (this.FallbackFieldsToExclude?.Any(x => x == fieldConfig.FieldId) == true)
-                    {
-                        continue;
+                        existingFieldConfig = merged.FieldConfigs.FirstOrDefault(
+                            x => x.Id == fieldConfig.Id);
                     }
-                    // treat non-null but empty included ids as null array, so that all
-                    // non-excluded ids will be included.
-                    if (this.FallbackFieldsToInclude?.Any() == true &&
-                        !this.FallbackFieldsToInclude.Contains(fieldConfig.FieldId))
+                    if (existingFieldConfig == null)
                     {
-                        continue;
-                    }
-                    var effectiveFieldConfig = merged.FieldConfigs.FirstOrDefault(
-                        x => x.FieldId == fieldConfig.FieldId);
-                    if (effectiveFieldConfig == null)
-                    {
-                        effectiveFieldConfig = new ResultFieldConfig
-                        {
-                            FieldId = fieldConfig.FieldId
-                        };
-                        fieldConfig.OverwriteEmptyPropsAsideId(effectiveFieldConfig);
-                        merged.FieldConfigs.Add(effectiveFieldConfig);
+                        merged.FieldConfigs.Add(fieldConfig);
                     }
                     else
                     {
-                        fieldConfig.OverwriteEmptyPropsAsideId(effectiveFieldConfig);
+                        fieldConfig.TransferNonEmptyPropsAsideId(existingFieldConfig);
                     }
                 }
             }
-            merged.BareResultSubsetGenerator = this.BareResultSubsetGenerator ??
-                fallbackEquivalent?.BareResultSubsetGenerator;
+
+            merged.ResultSubsetReprGeneratorChain = MicroOrmHelpers.MergeChains(
+                ResultSubsetReprGeneratorChain, merged.ResultSubsetReprGeneratorChain,
+                DiscardFallbackResultSubsetReprGeneratorChain);
+
             return merged;
         }
     }
