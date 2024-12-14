@@ -53,23 +53,29 @@ Some possible dependencies:
 
 ## Last Resort ORM strategy for both SQL and NoSQL Databases
 
-*Leverage existing micro-ORM solutions (ie ORM without caching),
-store all database information in a data storage format (e.g. XML, JSON, YAML),
-use a code generator to generate code artifacts required by the chosen micro-ORM solution,
-and generate any custom helping code artifacts purely based on the database information*
+*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM for running native queries, that stores mapping information between types and names of database objects and application objects  in serializable storage format (e.g. JSON, YAML).*
 
-JPA's persistence.xml file is an example of the kind of database information that has to be stored. In contrast, a micro-ORM will definitely not need all that information, will not need to use XML, and will make the file readily available to application code for introspection. Also it should be possible to indicate prescence of a relationship without implying the existence of a database foreign key contraint.
-
-Can create helper functions or code generation scripts which access database information stored in XML/JSON/YAML.
-Notable examples are
-  1. Functions which dynamically select a prepared SQL statement to execute from a specific subset of canned SQL statements, depending on the parameters.
-  2. Functions for mapping SQL query results to list of tuples of database classes from code generation. This is meant to precede conversion to data transfer objects. Ideas for this can be seen in https://scala-slick.org/doc/3.0.0/orm-to-slick.html#relationships
-
-Replace dynamic construction of SQL in application code with dynamic selection from a list of canned SQL statements. The canned statements can then be tested independently of the application code employing them. This seeks to leverage the fact that increasing variation in SQL snippets (typically with variation in WHERE clauses) decrease opportunities for optimizations to leverage indices. And so generating all possible canned SQL statements (likely with the help of a code generator) is feasible.
-
-Note that it may be helpful to have a way to run code generation multiple times and not just once initially. And so it may be necessary to have a way to detect unwanted changes to generated code artifacts.
-
-Learn from the following and avoid attempting to implement full-blown ORM solution.
+Learn from the following and avoid attempting to create fully-featured ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
   - https://scala-slick.org/doc/3.0.0/orm-to-slick.html
   - https://martinfowler.com/articles/evodb.html
+  - https://github.com/aaberg/sql2o/blob/master/core/src/main/java/org/sql2o/quirks/Quirks.java
+
+Replace all dynamic construction of native queries in application code with canned queries. The canned statements can then be tested independently of the application code employing them.
+
+A custom micro-ORM should support the following:
+  1. Enable testing of canned native queries independently of production runtime execution. Such tests should ensure that query results are generally non-empty so that mapping code can be effectively exercised.
+  1. Mapping application objects to query parameters or results of types expected by a given database driver.
+     - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
+  1. Getting column names of SQL query results.
+  2. Mapping query results to list of tuples of application objects - primitive types, indexed arrays, associative arrays or plain old objects whose properties are all of primitive types.
+     - mapping to associative arrays and plain old objects require getting column names of SQL query results. It also requires the query writer to supply mapping of group of columns to a tuple item position.
+
+Some ideas for mapping columns to tuple items are:
+  - the use of numbers indicating column counts. E.g. (3,4,2), to mean that the first 3 columns are for the first tuple item, the next 4 columns are for the second tuple item, and the last 2 columns are for the third tuple item.
+  - the use of first and last columns per tuple. E.g. (("id", "date_added"), ("id", "active"), ("id")), to mean all columns beginning with the first occurence of an "id" column" up to and including the first occurence of the "date_added" column is for the first tuple item. Searching after the last column of the first tuple item, the columns from the first "id"  column encountered up to the first "active" column encountered will be assigned to the second tuple item. And then the third tuple item will be assigned just one column, which will be the next "id" column to be found.
+  - specifying of all columns per tuple item. E.g. (("id", "age", "date_added"), ("id", "deleted", "owner", "active"), ("id")). This approach makes getting column names from SQL query results unnecessary.
+
+Can take note to leverage code generation if needed.
+
+
