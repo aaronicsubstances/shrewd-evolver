@@ -69,7 +69,8 @@ Leverage code generation if needed.
 Replace all dynamic construction of queries in application code with canned queries (whether native or not). *Canned statements refer to queries that can be tested independently of the application code employing them, and hence independently of runtime of production environment.*
 
 A custom micro-ORM should support the following:
-  2. Mapping query results to tuple of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
+
+  1. Mapping query results to tuple of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
   1. Getting column names of SQL query results.
   1. Converting application objects to database query parameters or query results of types expected by a given database driver.
      - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
