@@ -4,10 +4,13 @@
 
 *Use the property-graph model*.
 
-"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (map of key-value pairs) in the case of NoSQL. Also in this model, distinction exists between nodes and edges/relationships, and distinction exists between one-sided relationships which cannot have properties, and all other kind of relationships.
-  1. have a way to identify the type of each node, and each edge (ie either one-sided relationship which cannot have properties, or not). And in the case of edges, also have a way to identify the type of each of the targets of the relationship.
+"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (map of key-value pairs) in the case of NoSQL.
+  1. have a way to identify the type of each node
+  1. have a way to identify the type of each of the targets of each edge.
   1. abstract all relationships as potentially many-to-many to the public, i.e. hide one-sided relationship implementation details from the public.
-  2. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public
+     - For SQL, in which one to many relationship is implemented without a join table, see the table containing the foreign key as playing an additional role of join table, in which any new properties of the relationship can be added as columns in that table.
+     - When fetching the single end of one to many relationship, just fetch first row in result set, and skip validating that there is only a single row in the result set. With this, expanding to a many to many relationship will cause no or few runtime errors while giving developers time to make updates.
+  3. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public
      - E.g. always use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
 
 ## Last Resort Options for achieving ACID transactions
