@@ -4,7 +4,7 @@
 
 *Use the property-graph model*.
 
-"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (associative arrays) in the case of NoSQL.
+"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects/associative arrays in the case of NoSQL.
   1. have a way to identify the type of each node
   1. have a way to identify the type of each of the targets of each edge.
   1. abstract all relationships as potentially many-to-many to the public, i.e. hide one-sided relationship implementation details from the public.
@@ -64,17 +64,18 @@ Learn from the following and avoid attempting to create fully-featured ORM solut
   - https://martinfowler.com/articles/evodb.html
   - https://github.com/aaberg/sql2o/blob/master/core/src/main/java/org/sql2o/quirks/Quirks.java
 
-Replace all dynamic construction of queries in application code with canned queries (whether native or not). The canned statements can then be tested independently of the application code employing them.
+Leverage code generation if needed.
+
+Replace all dynamic construction of queries in application code with canned queries (whether native or not). *Canned statements refer to queries that can be tested independently of the application code employing them, and hence independently of runtime of production environment.*
 
 A custom micro-ORM should support the following:
-  1. Enable testing of canned queries independently of production runtime execution. Such tests should ensure that query results are generally non-empty so that mapping code can be effectively exercised.
-  1. Mapping application objects to query parameters or results of types expected by a given database driver.
-     - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
+  2. Mapping query results to tuple of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
   1. Getting column names of SQL query results.
-  2. Mapping query results to list of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
-  3. Leverage code generation if needed.
+  1. Converting application objects to database query parameters or query results of types expected by a given database driver.
+     - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
 
-Some ideas for mapping columns in SQL query results to list of plain old objects, associative arrays, or indexed arrays are:
+
+Some ideas for mapping column names in SQL query results to tuple of plain old objects or associative arrays are:
   - just use the database column names as names in the application objects, and let column results with the same column name overwrite each other. It is then the responsiblity of the developer to ensure uniqueness of query result column names. This seems to be the approach favoured by dynamically typed languages, and should be supported by any custom micro-ORM at a minimum.
-  - another approach is needed when it is desirable to be able to separate database object names from other parts of application code with the use of mappers, and also be able to rename database objects and have it automatically reflect in SQL queries. This is needed especially in statically typed languages. And that approach is to have a special syntactical convention used within SQL queries, in which column names of tables (and other database objects) and query results are specified as a pair of class name (or index in list) and property name (or key in associative array or index in indexed array). Syntax should differentiate between column names of query results and the rest. At build time, a linting program can be used to validate the syntactical constructs. And then at build time or runtime, a preprocessor can be used to replace the syntactical constructs with auto generated column names.
+  - another approach is needed when it is desirable to be able to separate database object names from other parts of application code with the use of mappers, and also be able to rename database objects and have it automatically reflect in SQL queries. This is needed especially in statically typed languages. And that approach is to have a special syntactical convention used within SQL queries, in which column names of query results and tables (and other database objects) are specified as a pair of class name (or index in tuple) and property name (or key in associative array). Syntax should differentiate between column names of query results and the rest. At build time, a linting program can be used to validate the syntactical constructs. And then at build time or runtime, a preprocessor can be used to replace the syntactical constructs with auto-generated column names.
 
