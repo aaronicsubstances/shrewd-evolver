@@ -4,11 +4,11 @@
 
 *Use the property-graph model*.
 
-"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (map of key-value pairs) in the case of NoSQL.
+"Property-graph model" as used here refers to the near equivalent of entity-relational model in which both nodes and edges are organised into either bags/multisets in the case of SQL, or objects (associative arrays) in the case of NoSQL.
   1. have a way to identify the type of each node
   1. have a way to identify the type of each of the targets of each edge.
   1. abstract all relationships as potentially many-to-many to the public, i.e. hide one-sided relationship implementation details from the public.
-     - For SQL, in which one to many relationship is implemented without a join table, see the table containing the foreign key as playing an additional role of join table, in which any new properties of the relationship can be added as columns in that table.
+     - For SQL, in which one to many relationship is implemented without a join table, the table containing the foreign key can be viewed as playing an additional role of join table, in which any new properties of the relationship can be added as columns in that table.
      - When fetching the single end of one to many relationship, just fetch first row in result set, and skip validating that there is only a single row in the result set. With this, expanding to a many to many relationship will cause no or few runtime errors while giving developers time to make updates.
   3. differentiate between the means of distinguishing entities for the purpose of establishing relationships in the property-graph model, from all other criteria for distinguishing entities, including criteria known to the public
      - E.g. always use internally-generated ids to identify entities for all programming purposes, including for forming relationships and for presenting to the public.
@@ -56,7 +56,7 @@ Some possible dependencies:
 
 ## Last Resort ORM strategy for both SQL and NoSQL Databases
 
-*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM for running native queries, that stores mapping information between types and names of database objects and application objects  in serializable storage format (e.g. JSON, YAML).*
+*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM for running both canned queries and native queries, that stores mapping information between types and names of database objects and application objects  in serializable storage format (e.g. JSON, YAML).*
 
 Learn from the following and avoid attempting to create fully-featured ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
@@ -64,21 +64,17 @@ Learn from the following and avoid attempting to create fully-featured ORM solut
   - https://martinfowler.com/articles/evodb.html
   - https://github.com/aaberg/sql2o/blob/master/core/src/main/java/org/sql2o/quirks/Quirks.java
 
-Replace all dynamic construction of native queries in application code with canned queries. The canned statements can then be tested independently of the application code employing them.
+Replace all dynamic construction of queries in application code with canned queries (whether native or not). The canned statements can then be tested independently of the application code employing them.
 
 A custom micro-ORM should support the following:
-  1. Enable testing of canned native queries independently of production runtime execution. Such tests should ensure that query results are generally non-empty so that mapping code can be effectively exercised.
+  1. Enable testing of canned queries independently of production runtime execution. Such tests should ensure that query results are generally non-empty so that mapping code can be effectively exercised.
   1. Mapping application objects to query parameters or results of types expected by a given database driver.
      - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
   1. Getting column names of SQL query results.
-  2. Mapping query results to list of tuples of application objects - primitive types, indexed arrays, associative arrays or plain old objects whose properties are all of primitive types.
-     - mapping to associative arrays and plain old objects require getting column names of SQL query results. It also requires the query writer to supply mapping of group of columns to a tuple item position.
+  2. Mapping query results to list of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
+  3. Leverage code generation if needed.
 
-Some ideas for mapping columns to tuple items are:
-  - the use of numbers indicating column counts. E.g. (3,4,2), to mean that the first 3 columns are for the first tuple item, the next 4 columns are for the second tuple item, and the last 2 columns are for the third tuple item.
-  - the use of first and last columns per tuple. E.g. (("id", "date_added"), ("id", "active"), ("id")), to mean all columns beginning with the first occurence of an "id" column" up to and including the first occurence of the "date_added" column is for the first tuple item. Searching after the last column of the first tuple item, the columns from the first "id"  column encountered up to the first "active" column encountered will be assigned to the second tuple item. And then the third tuple item will be assigned just one column, which will be the next "id" column to be found.
-  - specifying of all columns per tuple item. E.g. (("id", "age", "date_added"), ("id", "deleted", "owner", "active"), ("id")). This approach makes getting column names from SQL query results unnecessary.
-
-Can take note to leverage code generation if needed.
-
+Some ideas for mapping columns in SQL query results to list of plain old objects, associative arrays, or indexed arrays are:
+  - just use the database column names as names in the application objects, and let column results with the same column name overwrite each other. It is then the responsiblity of the developer to ensure uniqueness of query result column names. This seems to be the approach favoured by dynamically typed languages, and should be supported by any custom micro-ORM at a minimum.
+  - another approach is needed when it is desirable to be able to separate database object names from other parts of application code with the use of mappers, and also be able to rename database objects and have it automatically reflect in SQL queries. This is needed especially in statically typed languages. And that approach is to have a special syntactical convention used within SQL queries, in which column names of tables (and other database objects) and query results are specified as a pair of class name (or index in list) and property name (or key in associative array or index in indexed array). Syntax should differentiate between column names of query results and the rest. At build time, a linting program can be used to validate the syntactical constructs. And then at build time or runtime, a preprocessor can be used to replace the syntactical constructs with auto generated column names.
 
