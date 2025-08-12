@@ -56,7 +56,7 @@ Some possible dependencies:
 
 ## Last Resort ORM strategy for both SQL and NoSQL Databases
 
-*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM, built without caching, built for ease in porting to multiple programming languages, for running both named queries and native queries, that stores mapping information between types and names of database objects and application objects in serializable storage format (e.g. JSON, YAML).*
+*Prefer ORM solutions without internal caching (like Eloquent ORM) to those which are tightly coupled to internal caching (like Hibernate ORM). Then if needed, augment with an in-house micro-ORM, built without internal caching, built for ease in porting to multiple programming languages, for running both named queries and native queries, that stores mapping information between types and names of database objects and application objects in serializable storage format (e.g. JSON, YAML).*
 
 Learn from the following and avoid attempting to create fully-featured ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
