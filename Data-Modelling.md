@@ -56,7 +56,7 @@ Some possible dependencies:
 
 ## Last Resort ORM strategy for both SQL and NoSQL Databases
 
-*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM for running both canned queries and native queries, that stores mapping information between types and names of database objects and application objects  in serializable storage format (e.g. JSON, YAML).*
+*Prefer ORM solutions with support for cache busting to those which lack such support. Then if needed, augment with an in-house micro-ORM for running both named queries and native queries, that stores mapping information between types and names of database objects and application objects  in serializable storage format (e.g. JSON, YAML).*
 
 Learn from the following and avoid attempting to create fully-featured ORM solution.
   - https://blog.codinghorror.com/object-relational-mapping-is-the-vietnam-of-computer-science/
@@ -66,11 +66,11 @@ Learn from the following and avoid attempting to create fully-featured ORM solut
 
 Leverage code generation if needed.
 
-Replace all dynamic construction of queries in application code with canned queries (whether native or not). *Canned statements refer to queries that can be tested independently of the application code employing them, and hence independently of runtime of production environment.*
+Replace all dynamic construction of queries in application code with named queries (whether native or not). Named queries here refer to predefined queries like the equivalent of stored procedures in application code rather than database systems, and also like named queries in Java Persistence API. *A key goal for advocating for named queries is to be able to test them independently of runtime of production environment.*
 
 A custom micro-ORM should support the following:
 
-  1. Mapping query results to tuple of database types, indexed arrays of database types, associative arrays of database types, or plain old objects whose properties are all of database types.
+  1. Mapping query results to tuples in which the type of each tuple item is an associative array of database types, or a plain old object whose properties are of database types.
   1. Getting column names of SQL query results.
   1. Converting application objects to database query parameters or query results of types expected by a given database driver.
      - This usually depends on identifying the appropriate database driver function to call, and additional custom type converter functions in cases where database driver is falling behind.
@@ -78,5 +78,5 @@ A custom micro-ORM should support the following:
 
 Some ideas for mapping column names in SQL query results to tuple of plain old objects or associative arrays are:
   - just use the database column names as names in the application objects, and let column results with the same column name overwrite each other. It is then the responsiblity of the developer to ensure uniqueness of query result column names. This seems to be the approach favoured by dynamically typed languages, and should be supported by any custom micro-ORM at a minimum.
-  - another approach is needed when it is desirable to be able to separate database object names from other parts of application code with the use of mappers, and also be able to rename database objects and have it automatically reflect in SQL queries. This is needed especially in statically typed languages. And that approach is to have a special syntactical convention used within SQL queries, in which column names of query results and tables (and other database objects) are specified as a pair of class name (or index in tuple) and property name (or key in associative array). Syntax should differentiate between column names of query results and the rest. At build time, a linting program can be used to validate the syntactical constructs. And then at build time or runtime, a preprocessor can be used to replace the syntactical constructs with auto-generated column names.
+  - another approach is needed when it is desirable to be able to separate database object names from other parts of application code with the use of mappers, and also be able to rename database objects and have it automatically reflect in SQL queries. This is needed especially in statically typed languages. And that approach is to represent the SQL queries as an indexed array of strings and non-strings, in which column names of query results and tables (and other database objects) are specified as a plain old object (or associative array) containing class name (or index in tuple), property name (or key in associative array), and some information to differentiate column names of query results from the rest. At build time, a linting program can be used to validate the syntactical constructs. And then at build time or runtime, a preprocessor can be used to replace all non-strings with auto-generated string values.
 
