@@ -1,0 +1,42 @@
+
+assume deserialized json represents JSON objects as dictionaries
+validate deserialized json,
+preprocess from array of objects deserialized from json, to native SQL query with embedded parameters from which parameter map or parameter list can be extracted, and result column list of mapping information entries 
+
+mapping - means that sql native queries, contain objects other than strings 
+-input/parameter/output/result mapping template declaration
+-query snippet declaration  - names of database objects such as tables, table columns, views, stored procedures, user defined functions
+-input/parameter mapping instance creation
+-input/parameter mapping instance reference
+-output/result mapping instance creation
+-output/result mapping instance reference
+-query snippet creation
+
+conveniences which may be needed:
+*allow inline declarations
+*allow simultaneous declaration and creation
+*allow scoping of declarations, with at least two scopes: for all queries, and per query.
+ - for simplicity, can assume all are scoped in implentation of preprocess function
+
+input/output mapping declaration: of two types, base and derived
+
+-base mapping declaration:
+--key - to be referenced by derivations and instance creation
+--(optional) default database source object: table or view
+static list of entries, each with these props
+--database-side name (will be inferred if absent)
+--application-side name
+--database-side type (will be inferred if absent)
+--application-side type
+--(optional) database source object: table or view
+
+
+-derived mapping declaration:
+--key to base
+--includes application-side names - overrides excludes
+--excludes application-side names
+
+conveniences which may be needed
+*dynamically create base or derived mapping declarations from
+--fully qualified class name, e.g. JPA Entity class, .NET class annotated with PetaPoco's Entity and ResultColumn annotations
+--any other way
