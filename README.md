@@ -59,3 +59,6 @@ About measures which make it easier to discover an architecture from its impleme
 About measures which make transition to distributed systems easier:
   1. deploy the code as two nearly-identical processes (or process groups).
   1. manage the data as two nearly-identical horizontal data partitions, but such that local ACID transactions can be conducted across them.
+
+About measures which minimize data loss in event of bugs
+  1. Automated backup or checkpointing of session of laborious or manual tasks for generating data.
