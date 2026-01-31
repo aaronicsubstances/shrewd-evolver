@@ -5,12 +5,6 @@ Contains documents intended to record insights and opinions on software evolutio
 Sometimes the opinions take the form of source code files implementing a proposal.
 
 
-## My Last Resort for Dealing with Fragile Software Architectures
-
-  1. Code generation
-  2. Code generation with support for detecting changes to generated code artificats. See https://github.com/aaronicsubstances/code-augmentor for details.
-
-
 ## My Ideal Software Architecture
 
 My ideal software architecture (which comprises code and data architectures)  is one that meets the following criteria (in addition to all the excellent advice on [Wikipedia](https://en.wikipedia.org/wiki/Software_architecture)):
@@ -51,7 +45,7 @@ About abstractions that enables programmers to make incremental changes within t
      4. For web applications, prefer reverse proxying to self-hosting feature of some web frameworks. Leverage URL rewriting modules, FastCGI modules and programming language connector modules of reverse proxies such as Apache, Nginx or IIS to abstract multiple web deployments behind a single URL namespace. A use case for this is migrating a web application from one version of its framework and programming language to another.
 
 About measures which make it easier to discover an architecture from its implementation:
-  1. enforce code architecture by implementing modular boundaries with serializable, HTTP-like communication protocols. See https://github.com/aaronicsubstances/cskabomu for details.
+  1. enforce code architecture by implementing modular boundaries with serializable, HTTP-like communication protocols.
   4. encode database schema and entity-relational or property-graph model into data storage in such a way that it can be extracted by database reverse-engineering tools.
      1. This is especially important for NoSQL databases which are usually without a database schema.
      2. For simple SQL designs, the database schema may approximate the entity-relational model.
@@ -59,6 +53,3 @@ About measures which make it easier to discover an architecture from its impleme
 About measures which make transition to distributed systems easier:
   1. deploy the code as two nearly-identical processes (or process groups).
   1. manage the data as two nearly-identical horizontal data partitions, but such that local ACID transactions can be conducted across them.
-
-About measures which minimize data loss in event of bugs
-  1. Automated backup or checkpointing of session of laborious or manual tasks for generating data.
