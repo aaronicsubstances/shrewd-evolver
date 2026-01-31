@@ -11,3 +11,5 @@ What happens with the passage of time after first release: e.g. as requests per 
 10. need for data security, including possibility of barring access to programmer or DBA
 11. need to record input requests from external world (after redaction), to cater for unforeseen aspect of data architecture such as analytics.
 12. need to foresee software architecutre as a precursor to a distributed system
+13. need for backup or checkpointing of application data, especially during long period of laborious and manual generation of data, to enable rollback in the event of a severe bug.
+14. 
